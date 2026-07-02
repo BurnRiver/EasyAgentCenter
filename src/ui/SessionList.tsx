@@ -28,6 +28,8 @@ interface Props {
   activeSessionId: string | null
   onSelectSession: (id: string) => void
   onStopSession: (id: string) => void
+  onRestartSession: (session: SessionInfo) => void
+  onExportSessionMarkdown: (session: SessionInfo) => void
   onDeleteSession: (id: string) => void
   onDeleteSessions?: (ids: string[]) => void
   onMoveSession: (id: string, direction: 'up' | 'down') => void
@@ -219,6 +221,8 @@ export default function SessionList({
   activeSessionId,
   onSelectSession,
   onStopSession,
+  onRestartSession,
+  onExportSessionMarkdown,
   onDeleteSession,
   onDeleteSessions,
   onMoveSession,
@@ -599,8 +603,8 @@ export default function SessionList({
 
   const contextMenuStyle = contextMenu
     ? {
-        left: Math.min(contextMenu.x, Math.max(8, window.innerWidth - 172)),
-        top: Math.min(contextMenu.y, Math.max(8, window.innerHeight - 168)),
+        left: Math.min(contextMenu.x, Math.max(8, window.innerWidth - 188)),
+        top: Math.min(contextMenu.y, Math.max(8, window.innerHeight - 236)),
       }
     : undefined
 
@@ -839,6 +843,24 @@ export default function SessionList({
           style={contextMenuStyle}
           onClick={(event) => event.stopPropagation()}
         >
+          <button
+            type="button"
+            onClick={() => {
+              onRestartSession(contextMenu.session)
+              setContextMenu(null)
+            }}
+          >
+            {t('sessionList.restart')}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onExportSessionMarkdown(contextMenu.session)
+              setContextMenu(null)
+            }}
+          >
+            {t('sessionList.exportMarkdown')}
+          </button>
           <button
             type="button"
             onClick={() => {

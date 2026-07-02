@@ -208,11 +208,15 @@ export function spawnSession(
   transcriptStore.log(session.id, `Session started. Command: ${launch.label}, CWD: ${session.cwd}`)
 
   ptyProcess.onData((data: string) => {
+    if (instances.get(session.id) !== instance) return
+
     eventBus.emit({ type: 'data', sessionId: session.id, data })
     transcriptStore.log(session.id, data, 'output')
   })
 
   ptyProcess.onExit(({ exitCode }: { exitCode: number }) => {
+    if (instances.get(session.id) !== instance) return
+
     const stoppedByUser = stoppingSessions.has(session.id)
     const status: SessionStatus = stoppedByUser ? 'closed' : exitCode === 0 ? 'done' : 'failed'
     stoppingSessions.delete(session.id)
@@ -228,11 +232,30 @@ export function spawnSession(
   // Send initial prompt after PTY is ready
   if (initialPrompt) {
     setTimeout(() => {
-      sendInput(session.id, `${initialPrompt.replace(/\r\n/g, '\n').replace(/\r/g, '\n')}\r`)
+      if (instances.get(session.id) === instance) {
+        sendInput(session.id, `${initialPrompt.replace(/\r\n/g, '\n').replace(/\r/g, '\n')}\r`)
+      }
     }, session.promptDelayMs ?? 500)
   }
 
   return instance
+}
+
+export function restartSession(session: SessionInfo): PtyInstance {
+  const current = instances.get(session.id)
+  if (current) {
+    stoppingSessions.delete(session.id)
+    try {
+      current.pty.kill()
+    } catch {
+      // Process may have already exited.
+    }
+    if (instances.get(session.id) === current) {
+      instances.delete(session.id)
+    }
+  }
+
+  return spawnSession(session)
 }
 
 function shouldUseBracketedPaste(agentId: string): boolean {

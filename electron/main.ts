@@ -1,10 +1,11 @@
-import { existsSync } from 'node:fs'
-import { basename, dirname, extname } from 'node:path'
+import { existsSync, writeFileSync } from 'node:fs'
+import { basename, dirname, extname, join } from 'node:path'
 import { app, ipcMain, BrowserWindow, dialog, shell, Notification } from 'electron'
 import { createMainWindow } from './windows/main_window'
 import { sessionManager } from '../src/core/session_manager'
 import { discoverAgents } from '../src/discovery/agent_discovery'
 import { transcriptStore } from '../src/storage/transcript_store'
+import { buildSessionMarkdown, defaultMarkdownFileName } from '../src/storage/session_markdown_export'
 import type { ResolvedCommandFile, SessionNotificationPayload } from '../src/types'
 
 let mainWindow: BrowserWindow | null = null
@@ -88,6 +89,10 @@ function setupIPC() {
     return sessionManager.deleteSession(sessionId)
   })
 
+  ipcMain.handle('restart-session', async (_event, sessionId: string) => {
+    return sessionManager.restartSession(sessionId)
+  })
+
   ipcMain.handle('update-session', async (_event, sessionId: string, patch) => {
     return sessionManager.updateSession(sessionId, patch)
   })
@@ -118,6 +123,29 @@ function setupIPC() {
 
   ipcMain.handle('read-session-log', async (_event, sessionId: string) => {
     return transcriptStore.read(sessionId)
+  })
+
+  ipcMain.handle('export-session-markdown', async (_event, sessionId: string): Promise<string | null> => {
+    const session = sessionManager.getSession(sessionId)
+    if (!session) return null
+
+    const win = BrowserWindow.getFocusedWindow() ?? mainWindow ?? undefined
+    const options: Electron.SaveDialogOptions = {
+      title: 'Export Session Markdown',
+      defaultPath: join(app.getPath('documents'), defaultMarkdownFileName(session)),
+      filters: [{ name: 'Markdown', extensions: ['md'] }],
+    }
+    const result = win
+      ? await dialog.showSaveDialog(win, options)
+      : await dialog.showSaveDialog(options)
+    if (result.canceled || !result.filePath) return null
+
+    const filePath = extname(result.filePath).toLowerCase() === '.md'
+      ? result.filePath
+      : `${result.filePath}.md`
+    const markdown = buildSessionMarkdown(session, transcriptStore.read(sessionId))
+    writeFileSync(filePath, markdown, 'utf-8')
+    return filePath
   })
 
   ipcMain.handle('get-default-cwd', async () => {

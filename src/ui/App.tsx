@@ -24,6 +24,7 @@ declare global {
       createSession: (config: SessionConfig) => Promise<SessionInfo>
       openCodexThread: (cwd: string, prompt?: string) => Promise<boolean>
       deleteSession: (sessionId: string) => Promise<boolean>
+      restartSession: (sessionId: string) => Promise<SessionInfo | null>
       updateSession: (
         sessionId: string,
         patch: Pick<Partial<SessionInfo>, 'title' | 'archived'>
@@ -35,6 +36,7 @@ declare global {
       resizeSession: (sessionId: string, cols: number, rows: number) => void
       listSessions: () => Promise<SessionInfo[]>
       readSessionLog: (sessionId: string) => Promise<string>
+      exportSessionMarkdown: (sessionId: string) => Promise<string | null>
       getDefaultCwd: () => Promise<string>
       resolveCommandFile: (filePath: string) => Promise<ResolvedCommandFile>
       showNotification: (payload: SessionNotificationPayload) => Promise<boolean>
@@ -400,6 +402,19 @@ export default function App() {
           return next
         })
         window.easyAgentCenter.listSessions().then(setSessions)
+      } else if (event.type === 'restarted') {
+        notifiedSessionIdsRef.current.delete(event.sessionId)
+        setRawSessionOutputs((prev) => {
+          const next = { ...prev }
+          delete next[event.sessionId]
+          return next
+        })
+        setSessionOutputs((prev) => {
+          const next = { ...prev }
+          delete next[event.sessionId]
+          return next
+        })
+        window.easyAgentCenter.listSessions().then(setSessions)
       } else if (event.type === 'reordered' || event.type === 'updated') {
         window.easyAgentCenter.listSessions().then(setSessions)
       }
@@ -431,6 +446,41 @@ export default function App() {
   const handleStopSession = useCallback((sessionId: string) => {
     window.easyAgentCenter.stopSession(sessionId)
   }, [])
+
+  const handleRestartSession = useCallback(async (session: SessionInfo) => {
+    const label = session.title?.trim() ||
+      `${agentDisplayName(session.agentId, allAgents[session.agentId], t)} - ${dirLabel(session.cwd)}`
+    if (!window.confirm(t('sessionList.restartConfirm', { session: label }))) return
+
+    notifiedSessionIdsRef.current.delete(session.id)
+    setActiveSessionId(session.id)
+    setRawSessionOutputs((prev) => {
+      const next = { ...prev }
+      delete next[session.id]
+      return next
+    })
+    setSessionOutputs((prev) => {
+      const next = { ...prev }
+      delete next[session.id]
+      return next
+    })
+
+    const restarted = await window.easyAgentCenter.restartSession(session.id)
+    if (restarted) {
+      setSessions((prev) => prev.map((item) => item.id === restarted.id ? restarted : item))
+    }
+  }, [allAgents, t])
+
+  const handleExportSessionMarkdown = useCallback(async (session: SessionInfo) => {
+    try {
+      const filePath = await window.easyAgentCenter.exportSessionMarkdown(session.id)
+      if (filePath) {
+        window.alert(t('sessionList.exportMarkdownDone', { path: filePath }))
+      }
+    } catch {
+      window.alert(t('sessionList.exportMarkdownFailed'))
+    }
+  }, [t])
 
   const handleDeleteSession = useCallback(async (sessionId: string) => {
     const session = sessions.find((s) => s.id === sessionId)
@@ -636,6 +686,8 @@ export default function App() {
           activeSessionId={activeSessionId}
           onSelectSession={setActiveSessionId}
           onStopSession={handleStopSession}
+          onRestartSession={handleRestartSession}
+          onExportSessionMarkdown={handleExportSessionMarkdown}
           onDeleteSession={handleDeleteSession}
           onDeleteSessions={handleDeleteSessions}
           onMoveSession={handleMoveSession}

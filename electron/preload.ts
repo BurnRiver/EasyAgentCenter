@@ -13,6 +13,7 @@ export interface EasyAgentCenterAPI {
   createSession: (config: SessionConfig) => Promise<SessionInfo>
   openCodexThread: (cwd: string, prompt?: string) => Promise<boolean>
   deleteSession: (sessionId: string) => Promise<boolean>
+  restartSession: (sessionId: string) => Promise<SessionInfo | null>
   updateSession: (
     sessionId: string,
     patch: Pick<Partial<SessionInfo>, 'title' | 'archived'>
@@ -24,6 +25,7 @@ export interface EasyAgentCenterAPI {
   resizeSession: (sessionId: string, cols: number, rows: number) => void
   listSessions: () => Promise<SessionInfo[]>
   readSessionLog: (sessionId: string) => Promise<string>
+  exportSessionMarkdown: (sessionId: string) => Promise<string | null>
   getDefaultCwd: () => Promise<string>
   pickDirectory: (defaultPath?: string) => Promise<string | null>
   pickImageFile: (defaultPath?: string) => Promise<string | null>
@@ -40,6 +42,7 @@ const easyAgentCenter: EasyAgentCenterAPI = {
   openCodexThread: (cwd: string, prompt?: string) =>
     ipcRenderer.invoke('open-codex-thread', cwd, prompt),
   deleteSession: (sessionId: string) => ipcRenderer.invoke('delete-session', sessionId),
+  restartSession: (sessionId: string) => ipcRenderer.invoke('restart-session', sessionId),
   updateSession: (sessionId: string, patch: Pick<Partial<SessionInfo>, 'title' | 'archived'>) =>
     ipcRenderer.invoke('update-session', sessionId, patch),
   moveSession: (sessionId: string, direction: 'up' | 'down') =>
@@ -51,6 +54,8 @@ const easyAgentCenter: EasyAgentCenterAPI = {
     ipcRenderer.send('resize-session', sessionId, cols, rows),
   listSessions: () => ipcRenderer.invoke('list-sessions'),
   readSessionLog: (sessionId: string) => ipcRenderer.invoke('read-session-log', sessionId),
+  exportSessionMarkdown: (sessionId: string) =>
+    ipcRenderer.invoke('export-session-markdown', sessionId),
   getDefaultCwd: () => ipcRenderer.invoke('get-default-cwd'),
   pickDirectory: (defaultPath?: string) => ipcRenderer.invoke('pick-directory', defaultPath),
   pickImageFile: (defaultPath?: string) => ipcRenderer.invoke('pick-image-file', defaultPath),

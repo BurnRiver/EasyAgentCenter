@@ -69,7 +69,7 @@ export interface SessionInfo {
 }
 
 export interface SessionEvent {
-  type: 'created' | 'data' | 'exit' | 'status' | 'error' | 'deleted' | 'reordered' | 'updated'
+  type: 'created' | 'data' | 'exit' | 'status' | 'error' | 'deleted' | 'reordered' | 'updated' | 'restarted'
   sessionId: string
   data?: string
   code?: number

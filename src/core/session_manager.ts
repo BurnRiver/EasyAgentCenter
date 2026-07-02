@@ -1,5 +1,6 @@
 ﻿import { spawnSession, sendInput, sendPrompt, stopSession, resizeSession } from './pty_manager'
 import { eventBus } from './event_bus'
+import { restartSession as restartPtySession } from './pty_manager'
 import { randomUUID } from 'node:crypto'
 import { sessionStore } from '../storage/session_store'
 import { transcriptStore } from '../storage/transcript_store'
@@ -108,6 +109,26 @@ class SessionManager {
       eventBus.emit({ type: 'status', sessionId, status: 'closed' })
     }
     stopSession(sessionId)
+  }
+
+  restartSession(sessionId: string): SessionInfo | null {
+    const session = this.sessions.get(sessionId)
+    if (!session) return null
+
+    transcriptStore.delete(sessionId)
+    session.status = 'idle'
+    this.persist()
+    eventBus.emit({ type: 'restarted', sessionId, status: 'idle' })
+
+    try {
+      restartPtySession(session)
+    } catch {
+      session.status = 'failed'
+      this.persist()
+      eventBus.emit({ type: 'status', sessionId, status: 'failed' })
+    }
+
+    return session
   }
 
   deleteSession(sessionId: string): boolean {
