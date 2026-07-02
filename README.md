@@ -1,6 +1,6 @@
 # EasyAgentCenter
 
-中文介绍：EasyAgentCenter 是一个 Windows 桌面端 CLI Agent 管理器，用来集中启动和管理 Codex CLI、Kimi Code、Claude Code、OpenClaw、Hermes、PI coding agent 以及自定义命令行工具。
+中文介绍：EasyAgentCenter 是一个快捷、轻量化的 Windows 桌面端 CLI Agent 管理器，用来集中启动和管理 Codex CLI、Kimi Code、Claude Code、Hermes 等多种主流 Agent 工具，也支持用户自定义任何可运行的 Agent 工具或命令，实现快捷启动和管理。
 
 它适合同时使用多个编程 Agent 的用户：你可以按项目或按 Agent 查看会话，在内置终端里直接对话，快速启动项目目录，并在会话完成或失败时收到桌面通知。软件本身不内置 API Key，也不会上传你的会话数据；各 Agent 仍使用它们自己的登录状态和本地配置。
 
@@ -8,7 +8,7 @@
 
 - 自动发现 PATH 中已安装的 CLI Agent。
 - 按项目或按 Agent 管理会话。
-- 内置 PTY 终端，尽量接近原生命令行体验。
+- 内置 PTY 终端，接近原生命令行体验。
 - 支持 Agent 安装/更新命令提示。
 - 支持 Codex CLI 额度信息辅助面板。
 - 支持会话完成/失败后的系统通知。
