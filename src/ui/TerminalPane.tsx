@@ -319,6 +319,8 @@ export default function TerminalPane({
       }
       if (output) {
         terminal.write(output)
+      } else if (session.status !== 'running') {
+        terminal.writeln(`\x1b[90m${t('terminal.sessionClosed')}\x1b[0m`)
       }
       renderedSessionIdRef.current = session.id
       renderedOutputRef.current = output

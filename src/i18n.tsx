@@ -95,6 +95,7 @@ const translations: Record<Locale, Partial<Record<string, string>>> = {
     // Terminal
     'terminal.noSession': 'No active session',
     'terminal.selectHint': 'Select or create a session',
+    'terminal.sessionClosed': 'This saved session is not running. Start a new session to continue.',
     'terminal.exited': '[Process exited with code {code}]',
     // Detail panel
     'detail.title': 'Task Details',
@@ -259,6 +260,7 @@ const translations: Record<Locale, Partial<Record<string, string>>> = {
     // Terminal
     'terminal.noSession': '无活跃会话',
     'terminal.selectHint': '选择或创建一个会话',
+    'terminal.sessionClosed': '这个已保存的会话没有在运行。请新建会话继续使用。',
     'terminal.exited': '[进程退出，代码 {code}]',
     // Detail panel
     'detail.title': '任务详情',
@@ -420,6 +422,7 @@ const translations: Record<Locale, Partial<Record<string, string>>> = {
     'sessionList.copyTitle': '{title} копия',
     'terminal.noSession': 'Нет активного сеанса',
     'terminal.selectHint': 'Выберите или создайте сеанс',
+    'terminal.sessionClosed': 'Этот сохраненный сеанс не запущен. Создайте новый сеанс, чтобы продолжить.',
     'terminal.exited': '[Процесс завершен с кодом {code}]',
     'detail.title': 'Детали задачи',
     'detail.empty': 'Выберите сеанс для просмотра деталей',
@@ -553,6 +556,7 @@ const translations: Record<Locale, Partial<Record<string, string>>> = {
     'sessionList.copyTitle': '{title} のコピー',
     'terminal.noSession': 'アクティブなセッションなし',
     'terminal.selectHint': 'セッションを選択または作成',
+    'terminal.sessionClosed': 'この保存済みセッションは実行中ではありません。続けるには新しいセッションを作成してください。',
     'terminal.exited': '[プロセス終了、コード {code}]',
     'detail.title': 'タスク詳細',
     'detail.empty': '詳細を見るセッションを選択',
@@ -686,6 +690,7 @@ const translations: Record<Locale, Partial<Record<string, string>>> = {
     'sessionList.copyTitle': '{title} 복사본',
     'terminal.noSession': '활성 세션 없음',
     'terminal.selectHint': '세션을 선택하거나 생성하세요',
+    'terminal.sessionClosed': '저장된 이 세션은 실행 중이 아닙니다. 계속하려면 새 세션을 만드세요.',
     'terminal.exited': '[프로세스 종료, 코드 {code}]',
     'detail.title': '작업 세부 정보',
     'detail.empty': '세션을 선택해 세부 정보를 봅니다',
@@ -819,6 +824,7 @@ const translations: Record<Locale, Partial<Record<string, string>>> = {
     'sessionList.copyTitle': 'Copia de {title}',
     'terminal.noSession': 'No hay sesión activa',
     'terminal.selectHint': 'Selecciona o crea una sesión',
+    'terminal.sessionClosed': 'Esta sesión guardada no está en ejecución. Crea una nueva sesión para continuar.',
     'terminal.exited': '[Proceso terminado con código {code}]',
     'detail.title': 'Detalles de tarea',
     'detail.empty': 'Selecciona una sesión para ver detalles',

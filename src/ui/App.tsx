@@ -407,30 +407,6 @@ export default function App() {
     return unsubscribe
   }, [])
 
-  useEffect(() => {
-    if (!activeSessionId || rawSessionOutputs[activeSessionId]) return
-
-    let cancelled = false
-    window.easyAgentCenter.readSessionLog(activeSessionId).then((log) => {
-      if (cancelled || !log) return
-      const sessionCreatedAt = sessionsRef.current.find((item) => item.id === activeSessionId)?.createdAt
-      const rawLog = restoreTranscriptOutput(log, sessionCreatedAt ? sessionCreatedAt - 1000 : undefined)
-      if (!rawLog) return
-      setRawSessionOutputs((prev) => {
-        if (prev[activeSessionId]) return prev
-        return { ...prev, [activeSessionId]: appendOutput('', rawLog, RAW_OUTPUT_LIMIT) }
-      })
-      setSessionOutputs((prev) => {
-        if (prev[activeSessionId]) return prev
-        return { ...prev, [activeSessionId]: cleanSessionOutput(rawLog).slice(-CLEAN_OUTPUT_LIMIT) }
-      })
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [activeSessionId, rawSessionOutputs])
-
   const launchSession = useCallback(async (config: SessionConfig): Promise<SessionInfo | null> => {
     if (isExternalAgent(config.agentId)) {
       await window.easyAgentCenter.openCodexThread(config.cwd, config.prompt)
