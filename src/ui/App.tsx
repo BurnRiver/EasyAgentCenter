@@ -85,6 +85,7 @@ type BackgroundMode = 'dark' | 'white' | 'paper' | 'image'
 interface AppearanceSettings {
   backgroundMode: BackgroundMode
   customImagePath: string
+  terminalBackgroundColor: string
 }
 
 function normalizeBackgroundMode(value: unknown): BackgroundMode {
@@ -92,17 +93,24 @@ function normalizeBackgroundMode(value: unknown): BackgroundMode {
   return 'dark'
 }
 
+function normalizeTerminalBackgroundColor(value: unknown): string {
+  if (typeof value !== 'string') return '#000000'
+  const trimmed = value.trim()
+  return /^#[0-9a-f]{6}$/i.test(trimmed) ? trimmed : '#000000'
+}
+
 function readAppearanceSettings(): AppearanceSettings {
   try {
     const raw = localStorage.getItem(APPEARANCE_KEY)
-    if (!raw) return { backgroundMode: 'dark', customImagePath: '' }
+    if (!raw) return { backgroundMode: 'dark', customImagePath: '', terminalBackgroundColor: '#000000' }
     const parsed = JSON.parse(raw) as Partial<AppearanceSettings>
     return {
       backgroundMode: normalizeBackgroundMode(parsed.backgroundMode),
       customImagePath: typeof parsed.customImagePath === 'string' ? parsed.customImagePath : '',
+      terminalBackgroundColor: normalizeTerminalBackgroundColor(parsed.terminalBackgroundColor),
     }
   } catch {
-    return { backgroundMode: 'dark', customImagePath: '' }
+    return { backgroundMode: 'dark', customImagePath: '', terminalBackgroundColor: '#000000' }
   }
 }
 
@@ -258,7 +266,7 @@ function getDroppedFilePath(event: DragEvent<HTMLElement>): string | null {
 }
 
 export default function App() {
-  const { locale, setLocale, t } = useI18n()
+  const { locale, setLocale, previewLocale, t } = useI18n()
   const [sessions, setSessions] = useState<SessionInfo[]>([])
   const [rawSessionOutputs, setRawSessionOutputs] = useState<Record<string, string>>({})
   const [sessionOutputs, setSessionOutputs] = useState<Record<string, string>>({})
@@ -562,6 +570,7 @@ export default function App() {
     const cleanedAppearance = {
       backgroundMode: normalizeBackgroundMode(nextAppearance.backgroundMode),
       customImagePath: nextAppearance.customImagePath.trim(),
+      terminalBackgroundColor: normalizeTerminalBackgroundColor(nextAppearance.terminalBackgroundColor),
     }
     setLocale(nextLocale)
     setAppearanceSettings(cleanedAppearance)
@@ -569,6 +578,27 @@ export default function App() {
     writeAppearanceSettings(cleanedAppearance)
     setShowOptionsModal(false)
   }, [setLocale, setSessionNotificationsEnabled])
+
+  const handlePreviewOptions = useCallback((
+    nextLocale: Locale,
+    nextAppearance: AppearanceSettings,
+    nextSessionNotificationsEnabled: boolean
+  ) => {
+    previewLocale(nextLocale)
+    setAppearanceSettings(nextAppearance)
+    setSessionNotificationsEnabledState(nextSessionNotificationsEnabled)
+  }, [previewLocale])
+
+  const handleCancelOptions = useCallback((
+    previousLocale: Locale,
+    previousAppearance: AppearanceSettings,
+    previousSessionNotificationsEnabled: boolean
+  ) => {
+    previewLocale(previousLocale)
+    setAppearanceSettings(previousAppearance)
+    setSessionNotificationsEnabledState(previousSessionNotificationsEnabled)
+    setShowOptionsModal(false)
+  }, [previewLocale])
 
   const handleRefreshCodexQuota = useCallback(() => {
     if (!activeSessionId) return
@@ -660,6 +690,7 @@ export default function App() {
               }
             }}
             allowAutoFocus={!modalOpen}
+            terminalBackgroundColor={appearanceSettings.terminalBackgroundColor}
           />
         </div>
 
@@ -710,7 +741,8 @@ export default function App() {
           locale={locale}
           appearance={appearanceSettings}
           sessionNotificationsEnabled={sessionNotificationsEnabled}
-          onClose={() => setShowOptionsModal(false)}
+          onPreview={handlePreviewOptions}
+          onCancel={handleCancelOptions}
           onSave={handleSaveOptions}
         />
       )}
@@ -819,13 +851,23 @@ function OptionsModal({
   locale,
   appearance,
   sessionNotificationsEnabled,
-  onClose,
+  onCancel,
+  onPreview,
   onSave,
 }: {
   locale: Locale
   appearance: AppearanceSettings
   sessionNotificationsEnabled: boolean
-  onClose: () => void
+  onCancel: (
+    locale: Locale,
+    appearance: AppearanceSettings,
+    sessionNotificationsEnabled: boolean
+  ) => void
+  onPreview: (
+    locale: Locale,
+    appearance: AppearanceSettings,
+    sessionNotificationsEnabled: boolean
+  ) => void
   onSave: (
     locale: Locale,
     appearance: AppearanceSettings,
@@ -837,10 +879,25 @@ function OptionsModal({
   const [draftAppearance, setDraftAppearance] = useState<AppearanceSettings>(appearance)
   const [draftSessionNotificationsEnabled, setDraftSessionNotificationsEnabled] = useState(sessionNotificationsEnabled)
   const languageRef = useRef<HTMLSelectElement>(null)
+  const originalLocaleRef = useRef(locale)
+  const originalAppearanceRef = useRef(appearance)
+  const originalSessionNotificationsEnabledRef = useRef(sessionNotificationsEnabled)
 
   useEffect(() => {
     languageRef.current?.focus()
   }, [])
+
+  useEffect(() => {
+    onPreview(selectedLocale, draftAppearance, draftSessionNotificationsEnabled)
+  }, [draftAppearance, draftSessionNotificationsEnabled, onPreview, selectedLocale])
+
+  const handleCancel = () => {
+    onCancel(
+      originalLocaleRef.current,
+      originalAppearanceRef.current,
+      originalSessionNotificationsEnabledRef.current
+    )
+  }
 
   const setBackgroundMode = (backgroundMode: BackgroundMode) => {
     setDraftAppearance((prev) => ({ ...prev, backgroundMode }))
@@ -850,23 +907,27 @@ function OptionsModal({
     setDraftAppearance((prev) => ({ ...prev, customImagePath }))
   }
 
+  const setTerminalBackgroundColor = (terminalBackgroundColor: string) => {
+    setDraftAppearance((prev) => ({ ...prev, terminalBackgroundColor }))
+  }
+
   const pickImage = async () => {
     const picked = await window.easyAgentCenter.pickImageFile(draftAppearance.customImagePath || undefined)
     if (!picked) return
-    setDraftAppearance({ backgroundMode: 'image', customImagePath: picked })
+    setDraftAppearance((prev) => ({ ...prev, backgroundMode: 'image', customImagePath: picked }))
   }
 
   const handleImageDrop = (event: DragEvent<HTMLElement>) => {
     event.preventDefault()
     const filePath = getDroppedFilePath(event)
     if (!filePath) return
-    setDraftAppearance({ backgroundMode: 'image', customImagePath: filePath })
+    setDraftAppearance((prev) => ({ ...prev, backgroundMode: 'image', customImagePath: filePath }))
   }
 
   const backgroundModes: BackgroundMode[] = ['dark', 'white', 'paper', 'image']
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={handleCancel}>
       <div className="modal options-modal" onClick={(event) => event.stopPropagation()}>
         <h2>{t('options.title')}</h2>
 
@@ -931,11 +992,40 @@ function OptionsModal({
             <button
               type="button"
               className="btn btn-secondary btn-sm"
-              onClick={() => setDraftAppearance({ backgroundMode: 'paper', customImagePath: '' })}
+              onClick={() => setDraftAppearance((prev) => ({ ...prev, backgroundMode: 'paper', customImagePath: '' }))}
             >
               {t('options.clearImage')}
             </button>
           </div>
+        </div>
+
+        <div className="options-section">
+          <label className="options-label" htmlFor="options-terminal-background">
+            {t('options.terminalBackground')}
+          </label>
+          <div className="terminal-color-row">
+            <input
+              id="options-terminal-background"
+              type="color"
+              value={normalizeTerminalBackgroundColor(draftAppearance.terminalBackgroundColor)}
+              onChange={(event) => setTerminalBackgroundColor(event.target.value)}
+              aria-label={t('options.terminalBackground')}
+            />
+            <input
+              type="text"
+              value={draftAppearance.terminalBackgroundColor}
+              onChange={(event) => setTerminalBackgroundColor(event.target.value)}
+              placeholder="#000000"
+            />
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setTerminalBackgroundColor('#000000')}
+            >
+              {t('options.resetTerminalBackground')}
+            </button>
+          </div>
+          <div className="options-hint">{t('options.terminalBackgroundHint')}</div>
         </div>
 
         <div className="options-section">
@@ -954,7 +1044,7 @@ function OptionsModal({
         </div>
 
         <div className="modal-actions">
-          <button className="btn btn-secondary" onClick={onClose}>
+          <button className="btn btn-secondary" onClick={handleCancel}>
             {t('modal.cancel')}
           </button>
           <button

@@ -41,8 +41,11 @@ const translations: Record<Locale, Partial<Record<string, string>>> = {
     'options.imagePathPlaceholder': 'Choose or paste an image path...',
     'options.pickImage': 'Browse',
     'options.clearImage': 'Clear',
+    'options.terminalBackground': 'Terminal background',
+    'options.terminalBackgroundHint': 'Only the terminal base color changes. Agent ANSI colors are left alone.',
+    'options.resetTerminalBackground': 'Black',
     'options.save': 'Save',
-    'options.description': 'These settings affect the app shell only. Terminals stay black.',
+    'options.description': 'These settings affect the app shell and terminal background.',
     'options.notifications': 'Notifications',
     'options.sessionNotifications': 'Session completion alerts',
     'options.sessionNotificationsHint': 'Show a desktop notification when a session finishes or fails.',
@@ -202,8 +205,11 @@ const translations: Record<Locale, Partial<Record<string, string>>> = {
     'options.imagePathPlaceholder': '选择或粘贴图片路径...',
     'options.pickImage': '浏览',
     'options.clearImage': '清除',
+    'options.terminalBackground': '终端底色',
+    'options.terminalBackgroundHint': '只调整终端基础底色，不改 Agent 自己输出的 ANSI 颜色。',
+    'options.resetTerminalBackground': '黑色',
     'options.save': '保存',
-    'options.description': '这些设置只影响应用外壳；终端仍保持黑色。',
+    'options.description': '这些设置影响应用外观和终端底色。',
     'options.notifications': '通知',
     'options.sessionNotifications': '会话完成提醒',
     'options.sessionNotificationsHint': '会话完成或失败时，在桌面右下角弹出系统通知。',
@@ -362,6 +368,9 @@ const translations: Record<Locale, Partial<Record<string, string>>> = {
     'options.imagePathPlaceholder': 'Выберите или вставьте путь к изображению...',
     'options.pickImage': 'Обзор',
     'options.clearImage': 'Очистить',
+    'options.terminalBackground': 'Фон терминала',
+    'options.terminalBackgroundHint': 'Меняется только базовый фон терминала. ANSI-цвета агентов не изменяются.',
+    'options.resetTerminalBackground': 'Черный',
     'options.save': 'Сохранить',
     'options.description': 'Эти настройки меняют только оболочку приложения. Терминалы остаются черными.',
     'options.notifications': 'Уведомления',
@@ -492,6 +501,9 @@ const translations: Record<Locale, Partial<Record<string, string>>> = {
     'options.imagePathPlaceholder': '画像パスを選択または貼り付け...',
     'options.pickImage': '参照',
     'options.clearImage': 'クリア',
+    'options.terminalBackground': 'ターミナル背景',
+    'options.terminalBackgroundHint': 'ターミナルの基本背景色だけを変更します。Agent の ANSI 色はそのままです。',
+    'options.resetTerminalBackground': '黒',
     'options.save': '保存',
     'options.description': 'この設定はアプリの外側だけに適用されます。ターミナルは黒のままです。',
     'options.notifications': '通知',
@@ -622,6 +634,9 @@ const translations: Record<Locale, Partial<Record<string, string>>> = {
     'options.imagePathPlaceholder': '이미지 경로를 선택하거나 붙여넣기...',
     'options.pickImage': '찾아보기',
     'options.clearImage': '지우기',
+    'options.terminalBackground': '터미널 배경',
+    'options.terminalBackgroundHint': '터미널 기본 배경색만 바뀝니다. Agent ANSI 색상은 그대로 둡니다.',
+    'options.resetTerminalBackground': '검정',
     'options.save': '저장',
     'options.description': '이 설정은 앱 외형에만 적용됩니다. 터미널은 검은색으로 유지됩니다.',
     'options.notifications': '알림',
@@ -752,6 +767,9 @@ const translations: Record<Locale, Partial<Record<string, string>>> = {
     'options.imagePathPlaceholder': 'Elige o pega una ruta de imagen...',
     'options.pickImage': 'Examinar',
     'options.clearImage': 'Borrar',
+    'options.terminalBackground': 'Fondo de terminal',
+    'options.terminalBackgroundHint': 'Solo cambia el color base del terminal. Los colores ANSI del Agent se conservan.',
+    'options.resetTerminalBackground': 'Negro',
     'options.save': 'Guardar',
     'options.description': 'Estos ajustes solo cambian el marco de la app. Las terminales siguen negras.',
     'options.notifications': 'Notificaciones',
@@ -866,6 +884,7 @@ const translations: Record<Locale, Partial<Record<string, string>>> = {
 interface I18nContextValue {
   locale: Locale
   setLocale: (locale: Locale) => void
+  previewLocale: (locale: Locale) => void
   t: (key: string, params?: Record<string, string | number>) => string
 }
 
@@ -899,6 +918,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const previewLocale = useCallback((newLocale: Locale) => {
+    setLocaleState(newLocale)
+  }, [])
+
   const t = useCallback(
     (key: string, params?: Record<string, string | number>): string => {
       let text = translations[locale][key] ?? translations.en[key] ?? key
@@ -913,7 +936,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   )
 
   return (
-    <I18nContext.Provider value={{ locale, setLocale, t }}>
+    <I18nContext.Provider value={{ locale, setLocale, previewLocale, t }}>
       {children}
     </I18nContext.Provider>
   )

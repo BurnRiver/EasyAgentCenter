@@ -1,5 +1,6 @@
 ﻿import { useCallback, useEffect, useRef } from 'react'
 import { Terminal } from '@xterm/xterm'
+import type { CSSProperties } from 'react'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { useI18n } from '../i18n'
@@ -12,12 +13,39 @@ interface Props {
   onSendInput: (data: string) => void
   onResize: (cols: number, rows: number) => void
   allowAutoFocus: boolean
+  terminalBackgroundColor: string
 }
 
 function appendRenderedOutput(previous: string, chunk: string): string {
   const next = previous + chunk
   const maxLength = 240000
   return next.length > maxLength ? next.slice(next.length - maxLength) : next
+}
+
+function normalizeTerminalBackgroundColor(value: string): string {
+  const trimmed = value.trim()
+  return /^#[0-9a-f]{6}$/i.test(trimmed) ? trimmed : '#000000'
+}
+
+function isLightHexColor(value: string): boolean {
+  const color = normalizeTerminalBackgroundColor(value).slice(1)
+  const red = parseInt(color.slice(0, 2), 16)
+  const green = parseInt(color.slice(2, 4), 16)
+  const blue = parseInt(color.slice(4, 6), 16)
+  return (red * 299 + green * 587 + blue * 114) / 1000 > 150
+}
+
+function getTerminalTheme(backgroundColor: string) {
+  const background = normalizeTerminalBackgroundColor(backgroundColor)
+  const light = isLightHexColor(background)
+
+  return {
+    background,
+    foreground: light ? '#242424' : '#d4d4d4',
+    cursor: light ? '#242424' : '#d4d4d4',
+    selectionBackground: light ? '#c9d7ef' : '#3a3a3a',
+    selectionForeground: light ? '#111111' : undefined,
+  }
 }
 
 export default function TerminalPane({
@@ -27,6 +55,7 @@ export default function TerminalPane({
   onSendInput,
   onResize,
   allowAutoFocus,
+  terminalBackgroundColor,
 }: Props) {
   const { t } = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -44,6 +73,7 @@ export default function TerminalPane({
   const lastDataRef = useRef({ text: '', at: 0 })
   const lastResizeRef = useRef<{ sessionId: string; cols: number; rows: number } | null>(null)
   const fitFrameRef = useRef<number | null>(null)
+  const terminalBackgroundColorRef = useRef(terminalBackgroundColor)
 
   useEffect(() => {
     onSendInputRef.current = onSendInput
@@ -56,6 +86,13 @@ export default function TerminalPane({
   useEffect(() => {
     allowAutoFocusRef.current = allowAutoFocus
   }, [allowAutoFocus])
+
+  useEffect(() => {
+    terminalBackgroundColorRef.current = terminalBackgroundColor
+    if (terminalRef.current) {
+      terminalRef.current.options.theme = getTerminalTheme(terminalBackgroundColor)
+    }
+  }, [terminalBackgroundColor])
 
   const canFocusTerminal = useCallback(() => {
     const container = containerRef.current
@@ -124,12 +161,7 @@ export default function TerminalPane({
       fontWeight: 'normal',
       fontWeightBold: 'bold',
       fontFamily: '"Cascadia Mono", Consolas, "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans Mono CJK SC", "Courier New", monospace',
-      theme: {
-        background: '#000000',
-        foreground: '#d4d4d4',
-        cursor: '#d4d4d4',
-        selectionBackground: '#3a3a3a',
-      },
+      theme: getTerminalTheme(terminalBackgroundColorRef.current),
       cursorBlink: true,
       convertEol: false,
       scrollback: 10000,
@@ -255,7 +287,7 @@ export default function TerminalPane({
       terminalRef.current = null
       fitAddonRef.current = null
     }
-  }, [fitTerminal])
+  }, [scheduleFitTerminal])
 
   useEffect(() => {
     const terminal = terminalRef.current
@@ -337,7 +369,10 @@ export default function TerminalPane({
   }, [scheduleFitTerminal])
 
   return (
-    <div className="terminal-pane">
+    <div
+      className="terminal-pane"
+      style={{ '--terminal-bg': normalizeTerminalBackgroundColor(terminalBackgroundColor) } as CSSProperties}
+    >
       <div className="terminal-header">
         {session ? (
           <>
