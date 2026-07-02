@@ -51,7 +51,6 @@ export interface SessionConfig {
   cwd: string
   title?: string
   prompt?: string
-  stdinText?: string
   promptDelayMs?: number
 }
 

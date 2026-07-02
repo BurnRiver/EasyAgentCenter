@@ -1,7 +1,4 @@
 ﻿import * as pty from 'node-pty'
-import { mkdirSync, unlinkSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { eventBus } from './event_bus'
 import { transcriptStore } from '../storage/transcript_store'
 import type { SessionInfo, SessionStatus } from '../types'
@@ -13,7 +10,6 @@ export interface PtyInstance {
 
 const instances = new Map<string, PtyInstance>()
 const stoppingSessions = new Set<string>()
-const STDIN_FILE_TOKEN = '__EASY_AGENT_CENTER_STDIN_FILE__'
 
 function detectShell(): string {
   if (process.platform === 'win32') {
@@ -142,70 +138,6 @@ function buildLaunch(command: string, explicitArgs?: string[]): { file: string; 
   return { file, args, label: commandLine }
 }
 
-function createStdinFile(sessionId: string, content: string): string {
-  const dir = join(tmpdir(), 'easy-agent-center-prompts')
-  mkdirSync(dir, { recursive: true })
-  const path = join(dir, `${sessionId}-${Date.now()}.txt`)
-  writeFileSync(path, content, 'utf-8')
-  return path
-}
-
-function createWindowsStdinWrapper(
-  sessionId: string,
-  launch: { file: string; args: string[]; label: string },
-  stdinFilePath: string
-): string | undefined {
-  if (process.platform !== 'win32' || !isCmdExe(launch.file)) return undefined
-
-  const commandIndex = launch.args.findIndex((arg) => {
-    const normalized = arg.toLowerCase()
-    return normalized === '/c' || normalized === '/k'
-  })
-  if (commandIndex === -1) return undefined
-
-  const command = launch.args.slice(commandIndex + 1).join(' ')
-  if (!command.includes(STDIN_FILE_TOKEN)) return undefined
-
-  const dir = join(tmpdir(), 'easy-agent-center-prompts')
-  mkdirSync(dir, { recursive: true })
-  const wrapperPath = join(dir, `${sessionId}-${Date.now()}.cmd`)
-  const expandedCommand = command.split(STDIN_FILE_TOKEN).join(stdinFilePath)
-
-  writeFileSync(
-    wrapperPath,
-    ['@echo off', expandedCommand, 'exit /b %ERRORLEVEL%', ''].join('\r\n'),
-    'utf-8'
-  )
-
-  return wrapperPath
-}
-
-function applyStdinFileToken(
-  launch: { file: string; args: string[]; label: string },
-  stdinFilePath?: string
-): { file: string; args: string[]; label: string } {
-  if (!stdinFilePath) return launch
-
-  const replaceToken = (value: string) => value.split(STDIN_FILE_TOKEN).join(stdinFilePath)
-  const file = replaceToken(launch.file)
-  const args = launch.args.map(replaceToken)
-
-  return {
-    file,
-    args,
-    label: formatLaunchLabel(file, args),
-  }
-}
-
-function cleanupStdinFile(path?: string): void {
-  if (!path) return
-  try {
-    unlinkSync(path)
-  } catch {
-    // The temp file may already have been removed.
-  }
-}
-
 function spawnPty(
   file: string,
   args: string[],
@@ -232,26 +164,9 @@ function spawnPty(
 
 export function spawnSession(
   session: SessionInfo,
-  initialPrompt?: string,
-  stdinText?: string
+  initialPrompt?: string
 ): PtyInstance {
-  const stdinFilePath = stdinText ? createStdinFile(session.id, stdinText) : undefined
-  const rawLaunch = buildLaunch(session.command, session.args)
-  const stdinWrapperPath = stdinFilePath
-    ? createWindowsStdinWrapper(session.id, rawLaunch, stdinFilePath)
-    : undefined
-  const launch = stdinWrapperPath
-    ? {
-        file: 'cmd.exe',
-        args: ['/d', '/c', stdinWrapperPath],
-        label: formatLaunchLabel('cmd.exe', ['/d', '/c', stdinWrapperPath]),
-      }
-    : applyStdinFileToken(rawLaunch, stdinFilePath)
-
-  const cleanupStdinArtifacts = () => {
-    cleanupStdinFile(stdinFilePath)
-    cleanupStdinFile(stdinWrapperPath)
-  }
+  const launch = buildLaunch(session.command, session.args)
 
   let ptyProcess: pty.IPty
   try {
@@ -262,7 +177,6 @@ export function spawnSession(
         ptyProcess = spawnPty('cmd.exe', ['/d', '/s', '/k', launch.label], session)
         transcriptStore.log(session.id, `Direct command spawn failed, used cmd.exe fallback: ${err}`)
       } catch (fallbackErr) {
-        cleanupStdinArtifacts()
         session.status = 'failed'
         eventBus.emit({
           type: 'error',
@@ -274,7 +188,6 @@ export function spawnSession(
         throw fallbackErr
       }
     } else {
-      cleanupStdinArtifacts()
       session.status = 'failed'
       eventBus.emit({
         type: 'error',
@@ -300,7 +213,6 @@ export function spawnSession(
   })
 
   ptyProcess.onExit(({ exitCode }: { exitCode: number }) => {
-    cleanupStdinArtifacts()
     const stoppedByUser = stoppingSessions.has(session.id)
     const status: SessionStatus = stoppedByUser ? 'closed' : exitCode === 0 ? 'done' : 'failed'
     stoppingSessions.delete(session.id)

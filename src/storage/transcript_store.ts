@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, unlinkSync } from 'node:fs'
 import { join } from 'node:path'
 import { writableAppRoot } from './app_data_path'
 
@@ -22,6 +22,8 @@ class TranscriptStore {
       .replace(/\x1b\[[0-9;?<>]*[ -/]*[@-~]/g, '')
       .replace(/\x1b[()][A-Za-z0-9]/g, '')
       .replace(/\x1b[=>]/g, '')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
       .trimEnd()
   }
 
@@ -52,6 +54,15 @@ class TranscriptStore {
     } catch (err) {
       console.error('[TranscriptStore] Failed to read log:', err)
       return ''
+    }
+  }
+
+  delete(sessionId: string): void {
+    try {
+      const logFile = join(this.logsDir, `${sessionId}.log`)
+      if (existsSync(logFile)) unlinkSync(logFile)
+    } catch (err) {
+      console.error('[TranscriptStore] Failed to delete log:', err)
     }
   }
 }

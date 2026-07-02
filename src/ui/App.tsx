@@ -405,7 +405,9 @@ export default function App() {
     let cancelled = false
     window.easyAgentCenter.readSessionLog(activeSessionId).then((log) => {
       if (cancelled || !log) return
-      const rawLog = restoreTranscriptOutput(log)
+      const sessionCreatedAt = sessionsRef.current.find((item) => item.id === activeSessionId)?.createdAt
+      const rawLog = restoreTranscriptOutput(log, sessionCreatedAt ? sessionCreatedAt - 1000 : undefined)
+      if (!rawLog) return
       setRawSessionOutputs((prev) => {
         if (prev[activeSessionId]) return prev
         return { ...prev, [activeSessionId]: appendOutput('', rawLog, RAW_OUTPUT_LIMIT) }
@@ -771,8 +773,8 @@ function renderAgentJsonOutput(output: string): string {
   return output
 }
 
-function restoreTranscriptOutput(output: string): string {
-  const lines = output.split('\n')
+function restoreTranscriptOutput(output: string, sinceMs?: number): string {
+  const lines = output.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n')
   const transcriptLine = /^\[\d{4}-\d{2}-\d{2}T[^\]]+\]\s+(<<<|>>>|---)\s?(.*)$/
 
   if (!lines.some((line) => transcriptLine.test(line))) {
@@ -785,8 +787,14 @@ function restoreTranscriptOutput(output: string): string {
   for (const line of lines) {
     const match = line.match(transcriptLine)
     if (match) {
+      const timestamp = Date.parse(match[0].slice(1, match[0].indexOf(']')))
       const marker = match[1]
       const content = match[2] ?? ''
+      if (sinceMs && Number.isFinite(timestamp) && timestamp < sinceMs) {
+        currentType = null
+        continue
+      }
+
       currentType = marker === '<<<' ? 'output' : marker === '>>>' ? 'input' : 'system'
 
       if (currentType === 'output') {

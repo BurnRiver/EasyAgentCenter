@@ -42,6 +42,8 @@ export default function TerminalPane({
   const compositionStartedAtRef = useRef(0)
   const compositionDataRef = useRef('')
   const lastDataRef = useRef({ text: '', at: 0 })
+  const lastResizeRef = useRef<{ sessionId: string; cols: number; rows: number } | null>(null)
+  const fitFrameRef = useRef<number | null>(null)
 
   useEffect(() => {
     onSendInputRef.current = onSendInput
@@ -81,10 +83,34 @@ export default function TerminalPane({
     if (!terminal || !fitAddon) return
 
     fitAddon.fit()
-    if (sessionIdRef.current && terminal.cols > 0 && terminal.rows > 0) {
+    const sessionId = sessionIdRef.current
+    const lastResize = lastResizeRef.current
+    if (
+      sessionId &&
+      terminal.cols > 0 &&
+      terminal.rows > 0 &&
+      (
+        !lastResize ||
+        lastResize.sessionId !== sessionId ||
+        lastResize.cols !== terminal.cols ||
+        lastResize.rows !== terminal.rows
+      )
+    ) {
+      lastResizeRef.current = { sessionId, cols: terminal.cols, rows: terminal.rows }
       onResizeRef.current(terminal.cols, terminal.rows)
     }
   }, [])
+
+  const scheduleFitTerminal = useCallback(() => {
+    if (fitFrameRef.current !== null) {
+      window.cancelAnimationFrame(fitFrameRef.current)
+    }
+
+    fitFrameRef.current = window.requestAnimationFrame(() => {
+      fitFrameRef.current = null
+      fitTerminal()
+    })
+  }, [fitTerminal])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -107,7 +133,7 @@ export default function TerminalPane({
       cursorBlink: true,
       convertEol: false,
       scrollback: 10000,
-      rightClickSelectsWord: true,
+      rightClickSelectsWord: false,
       windowsPty: isWindows ? { backend: 'conpty' } : undefined,
     })
 
@@ -115,7 +141,7 @@ export default function TerminalPane({
     terminal.loadAddon(fitAddon)
     terminal.open(container)
     requestAnimationFrame(() => {
-      fitTerminal()
+      scheduleFitTerminal()
       if (canFocusTerminal()) {
         terminal.focus()
       }
@@ -204,9 +230,7 @@ export default function TerminalPane({
     }
     const handleContextMenu = (event: MouseEvent) => {
       event.preventDefault()
-      if (!copySelection()) {
-        pasteClipboard()
-      }
+      copySelection()
     }
 
     container.addEventListener('mousedown', focusTerminal)
@@ -223,6 +247,10 @@ export default function TerminalPane({
       textarea?.removeEventListener('compositionstart', handleCompositionStart)
       textarea?.removeEventListener('compositionupdate', handleCompositionUpdate)
       textarea?.removeEventListener('compositionend', handleCompositionEnd)
+      if (fitFrameRef.current !== null) {
+        window.cancelAnimationFrame(fitFrameRef.current)
+        fitFrameRef.current = null
+      }
       terminal.dispose()
       terminalRef.current = null
       fitAddonRef.current = null
@@ -245,6 +273,9 @@ export default function TerminalPane({
 
     sessionIdRef.current = session.id
     const sessionChanged = renderedSessionIdRef.current !== session.id
+    if (sessionChanged) {
+      lastResizeRef.current = null
+    }
     const shouldRenderSnapshot = sessionChanged ||
       (session.status !== 'running' && !renderedOutputRef.current && Boolean(output))
 
@@ -260,14 +291,14 @@ export default function TerminalPane({
       renderedSessionIdRef.current = session.id
       renderedOutputRef.current = output
       requestAnimationFrame(() => {
-        fitTerminal()
+        scheduleFitTerminal()
         terminal.scrollToBottom()
         if (canFocusTerminal()) {
           terminal.focus()
         }
       })
     }
-  }, [fitTerminal, output, session?.id, session?.status, t])
+  }, [scheduleFitTerminal, output, session?.id, session?.status, t])
 
   useEffect(() => {
     if (!session) return
@@ -298,12 +329,12 @@ export default function TerminalPane({
     if (!container || !fitAddonRef.current) return
 
     const observer = new ResizeObserver(() => {
-      requestAnimationFrame(fitTerminal)
+      scheduleFitTerminal()
     })
     observer.observe(container)
 
     return () => observer.disconnect()
-  }, [fitTerminal])
+  }, [scheduleFitTerminal])
 
   return (
     <div className="terminal-pane">

@@ -1,19 +1,22 @@
 ﻿import { spawnSession, sendInput, sendPrompt, stopSession, resizeSession } from './pty_manager'
 import { eventBus } from './event_bus'
+import { randomUUID } from 'node:crypto'
 import { sessionStore } from '../storage/session_store'
+import { transcriptStore } from '../storage/transcript_store'
 import type { SessionConfig, SessionInfo, SessionEvent } from '../types'
 
 class SessionManager {
   private sessions = new Map<string, SessionInfo>()
   private eventListeners: ((event: SessionEvent) => void)[] = []
-  private nextId = 1
 
   constructor() {
     const restoredSessions = sessionStore.loadSessions()
     for (const session of restoredSessions) {
+      if (session.status === 'running' || session.status === 'idle') {
+        session.status = 'closed'
+      }
       this.sessions.set(session.id, session)
     }
-    this.nextId = this.computeNextId()
     if (restoredSessions.length > 0) {
       this.persist()
     }
@@ -33,21 +36,12 @@ class SessionManager {
     })
   }
 
-  private computeNextId(): number {
-    let maxId = 0
-    for (const session of this.sessions.values()) {
-      const match = session.id.match(/^session-(\d+)$/)
-      if (match) maxId = Math.max(maxId, Number(match[1]))
-    }
-    return maxId + 1
-  }
-
   private persist(): void {
     sessionStore.saveSessions(this.listSessions())
   }
 
   createSession(config: SessionConfig): SessionInfo {
-    const id = `session-${this.nextId++}`
+    const id = `session-${randomUUID()}`
     const session: SessionInfo = {
       id,
       agentId: config.agentId,
@@ -67,7 +61,7 @@ class SessionManager {
 
     // Spawn PTY — may throw if cwd doesn't exist or spawn fails
     try {
-      spawnSession(session, config.prompt, config.stdinText)
+      spawnSession(session, config.prompt)
     } catch {
       session.status = 'failed'
       eventBus.emit({ type: 'status', sessionId: id, status: 'failed' })
@@ -125,6 +119,7 @@ class SessionManager {
     }
 
     this.sessions.delete(sessionId)
+    transcriptStore.delete(sessionId)
     this.persist()
     eventBus.emit({ type: 'deleted', sessionId })
     return true
