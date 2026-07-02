@@ -1,0 +1,85 @@
+# EasyAgentCenter
+
+[English](README.md) | [简体中文](README.zh-CN.md) | [Русский](README.ru.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Español](README.es.md)
+
+EasyAgentCenter는 Windows 데스크톱용 가볍고 빠른 CLI Agent 관리자입니다. Codex CLI, Kimi Code, Claude Code, Hermes 같은 주요 Agent 도구를 한곳에서 실행하고 관리할 수 있으며, 사용자가 실행 가능한 Agent 도구나 명령도 직접 추가할 수 있습니다.
+
+여러 코딩 Agent를 동시에 사용하는 사용자에게 적합합니다. 프로젝트별 또는 Agent별로 세션을 확인하고, 내장 터미널에서 바로 대화하며, 프로젝트 디렉터리에서 빠르게 시작할 수 있습니다. 세션이 완료되거나 실패하면 데스크톱 알림도 받을 수 있습니다. EasyAgentCenter 자체에는 API Key가 포함되어 있지 않으며 세션 데이터를 업로드하지 않습니다. 각 Agent는 자신의 로그인 상태와 로컬 설정을 그대로 사용합니다.
+
+## 스크린샷
+
+<p>
+  <img src="docs/images/easyagentcenter-light-preview.png" alt="EasyAgentCenter light theme preview" width="49%">
+  <img src="docs/images/easyagentcenter-dark-preview.png" alt="EasyAgentCenter dark terminal preview" width="49%">
+</p>
+
+## 주요 기능
+
+- PATH에 설치된 CLI Agent 자동 검색.
+- 프로젝트 폴더 추가 및 선택한 프로젝트에서 Agent 빠른 시작.
+- 프로젝트별 또는 Agent별 세션 관리.
+- 세션 기록 중지, 삭제, 일괄 삭제, 순서 변경, 복원.
+- 내장 PTY 터미널에서 Agent와 직접 대화.
+- 터미널 배경색 사용자 지정.
+- Codex CLI `/status`, `/usage` 출력을 보조하는 선택형 quota 패널.
+- 알려진 Agent의 설치/업데이트 명령 안내.
+- 세션 완료/실패 후 선택형 데스크톱 알림.
+- UI 언어: 영어, 중국어 간체, 러시아어, 일본어, 한국어, 스페인어.
+
+## 개인정보
+
+EasyAgentCenter는 세션 메타데이터와 세션 로그를 사용자의 컴퓨터에 로컬로 저장합니다. 앱 자체는 세션 데이터를 업로드하지 않으며 API Key를 포함하지 않습니다. 개별 CLI Agent는 자체 로그인 상태, 환경 변수 또는 로컬 설정을 사용할 수 있습니다.
+
+개발 환경에서는 로컬 `data/` 및 `logs/` 폴더가 Git에서 무시되며 저장소에 커밋하면 안 됩니다.
+
+## 빠른 시작
+
+### 개발 실행
+
+```bash
+npm ci
+npm run dev
+```
+
+### 원클릭 개발 실행
+
+더블 클릭:
+
+```text
+start-easy-agent-center.bat
+```
+
+명령 프롬프트 창을 숨기고 실행하려면:
+
+```text
+start-easy-agent-center-hidden.vbs
+```
+
+숨김 실행기는 `npm run dev`를 백그라운드에서 시작합니다. 시작 문제를 디버깅할 때는 보이는 `.bat` 파일을 사용하는 것이 좋습니다.
+
+### 패키징
+
+```bash
+npm run dist:dir
+```
+
+압축 해제된 앱 실행:
+
+```text
+dist\win-unpacked\easy-agent-center.exe
+```
+
+포터블 exe:
+
+```bash
+npm run dist
+```
+
+## 요구 사항
+
+- Node.js 24.14.0, `.nvmrc` / `.node-version` 참조
+- Windows가 주요 대상 플랫폼입니다
+
+## 라이선스
+
+[MIT](LICENSE)

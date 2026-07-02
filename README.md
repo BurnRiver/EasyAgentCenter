@@ -1,6 +1,6 @@
 # EasyAgentCenter
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+[English](README.md) | [简体中文](README.zh-CN.md) | [Русский](README.ru.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Español](README.es.md)
 
 Lightweight Windows desktop manager for CLI coding agents such as Codex CLI, Kimi Code, Claude Code, OpenClaw, Hermes, PI coding agent, and custom shell commands.
 
@@ -30,9 +30,9 @@ It is built for users who work with multiple coding agents at the same time: vie
 
 ## Privacy Notes
 
-EasyAgentCenter stores local session metadata under `data/` and transcript logs under `logs/` during development. These folders are ignored by Git and should not be published.
+EasyAgentCenter keeps session metadata and transcript logs locally on your computer. The app itself does not upload your session data and does not include API keys. Individual CLI agents may use their own login state or environment variables.
 
-The app does not require API keys by itself. Individual CLI agents may use their own login state or environment variables.
+In development builds, local `data/` and `logs/` folders are ignored by Git and should not be committed.
 
 ## Quick Start
 
