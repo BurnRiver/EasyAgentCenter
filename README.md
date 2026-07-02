@@ -14,6 +14,13 @@
 - 支持会话完成/失败后的系统通知。
 - 支持英文、简体中文、俄语、日语、韩语和西班牙语界面。
 
+## 界面预览 / Screenshots
+
+<p>
+  <img src="docs/images/easyagentcenter-dark-preview.png" alt="EasyAgentCenter dark terminal preview" width="49%">
+  <img src="docs/images/easyagentcenter-light-preview.png" alt="EasyAgentCenter light theme preview" width="49%">
+</p>
+
 ---
 
 Lightweight Windows desktop manager for CLI coding agents such as Codex CLI, Kimi Code, Claude Code, OpenClaw, Hermes, PI coding agent, and custom shell commands.
