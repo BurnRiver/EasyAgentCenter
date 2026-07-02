@@ -1,56 +1,39 @@
 # EasyAgentCenter 项目文档
 
-EasyAgentCenter 是一个面向 Windows 的轻量 CLI agent 会话管理器。
+这份文档是 README 的中文补充，记录项目定位和设计取舍。公开介绍、安装方式、脚本命令和许可证以 [README.md](README.md) 为准。
 
-## 当前定位
+## 项目定位
 
-- Windows 优先。
-- 管理 Codex CLI、Kimi Code、Claude Code、OpenClaw、Hermes Agent、PI coding agent 等 CLI agent。
-- 支持用户添加自定义 CLI agent 或本地快捷方式。
-- 使用 Electron + React + node-pty + xterm.js 提供桌面终端体验。
-- 保留项目、会话、日志、agent 发现、安装/更新辅助。
+EasyAgentCenter 是一个面向 Windows 的 CLI Agent 桌面管理器。它把常用编程 Agent 的启动、会话列表、终端交互和本地记录集中到一个界面里，让用户不用在多个命令行窗口之间来回切换。
 
-## 核心功能
+项目优先服务这些场景：
 
-- Agent 自动发现和状态展示。
-- 项目文件夹收藏。
-- 按项目或按 agent 查看会话。
-- 快速启动 agent 到指定项目。
-- 创建自定义 CLI 会话。
-- 停止、删除、批量删除、排序、归档、恢复会话记录。
-- xterm.js 终端交互，支持选择、复制、粘贴、中文输入兼容。
+- 同时使用 Codex CLI、Kimi Code、Claude Code、OpenClaw、Hermes、PI coding agent 等工具。
+- 经常在多个项目目录之间切换 Agent 会话。
+- 希望用接近原生命令行的方式与 Agent 对话。
+- 需要保留本地会话记录，方便回看或恢复上下文。
+
+## 设计原则
+
+- 桌面外壳尽量轻，核心交互放在终端里。
+- Agent 自己负责登录、模型、账号和环境变量，EasyAgentCenter 不接管这些配置。
+- 不把会话内容上传到远程服务，记录只保存在本机。
+- 界面优先保证可读性和可操作性，提供专注模式扩大终端空间。
+
+## 当前能力
+
+- 自动发现 PATH 中的常见 Agent CLI。
+- 支持用户添加自定义 Agent 或本地快捷方式。
+- 支持按项目或按 Agent 查看会话。
+- 支持快速在指定项目目录启动 Agent。
+- 支持停止、删除、批量删除、排序、归档和恢复会话记录。
+- 内置 xterm.js 终端，支持选择、复制、粘贴和中文输入。
 - 可选 Codex 额度面板。
-- 会话进程完成或失败时可选桌面通知。
-- 会话记录写入 `logs/`，会话元数据写入 `data/`。
+- 可选会话完成或失败后的系统通知。
+- 支持多语言界面。
 
-## 本地启动
+## 使用边界
 
-```powershell
-npm ci
-npm run dev
-```
+EasyAgentCenter 是一个本地桌面管理器，不包含任何 Agent 的账号、订阅或 API 能力。用户需要先在自己的电脑上安装并登录对应的 CLI Agent。
 
-也可以双击：
-
-```text
-start-easy-agent-center.bat
-```
-
-隐藏开发启动：
-
-```text
-start-easy-agent-center-hidden.vbs
-```
-
-## 验证
-
-```powershell
-npm run typecheck
-npm run build
-```
-
-## 开源发布注意
-
-- 不提交 `data/`、`logs/`、`dist/`、`out/`、`node_modules/`。
-- 不提交 `.env` 或任何账号、token、API key。
-- 打包产物由用户本地运行 `npm run dist` 或 `npm run dist:dir` 生成。
+某些 Agent 的 TUI 会根据终端列数自动重排，因此在内置终端里可能和 Windows Terminal 的显示略有差异。可以使用专注模式收起右侧任务详情栏，让终端获得更大的显示区域。
