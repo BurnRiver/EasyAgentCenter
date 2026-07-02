@@ -173,8 +173,8 @@ body {
 
 /* === Session List (Left Panel) === */
 .session-list {
-  width: 220px;
-  min-width: 220px;
+  width: 210px;
+  min-width: 210px;
   background: #18181b;
   border-right: 1px solid #2a2a30;
   display: flex;
@@ -680,8 +680,8 @@ body {
 
 /* === Right Panel === */
 .right-panel {
-  width: clamp(220px, 16vw, 260px);
-  min-width: 220px;
+  width: clamp(190px, 13vw, 230px);
+  min-width: 190px;
   background: #18181b;
   border-left: 1px solid #2a2a30;
   display: flex;
@@ -726,7 +726,7 @@ body {
 .detail-value {
   color: #e0e0e0;
   text-align: right;
-  max-width: 104px;
+  max-width: 88px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

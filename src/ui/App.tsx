@@ -276,8 +276,6 @@ export default function App() {
   const [appearanceSettings, setAppearanceSettings] = useState<AppearanceSettings>(readAppearanceSettings)
   const [sessionNotificationsEnabled, setSessionNotificationsEnabledState] = useState(getInitialSessionNotificationsEnabled)
   const [isBooting, setIsBooting] = useState(true)
-  const [focusMode, setFocusMode] = useState(false)
-  const [terminalLayoutRevision, setTerminalLayoutRevision] = useState(0)
   const sessionsRef = useRef<SessionInfo[]>([])
   const allAgentsRef = useRef<Record<string, AgentInstall | null>>({})
   const sessionNotificationsEnabledRef = useRef(sessionNotificationsEnabled)
@@ -607,15 +605,6 @@ export default function App() {
           >
             {t('btn.newSession')}
           </button>
-          <button
-            className={`btn btn-secondary ${focusMode ? 'active' : ''}`}
-            onClick={() => {
-              setFocusMode((current) => !current)
-              setTerminalLayoutRevision((current) => current + 1)
-            }}
-          >
-            {focusMode ? t('btn.exitFocusMode') : t('btn.focusMode')}
-          </button>
           <button className="btn btn-secondary" onClick={() => window.easyAgentCenter.discoverAgents().then(setAgents)}>
             {t('btn.refreshAgents')}
           </button>
@@ -669,22 +658,19 @@ export default function App() {
               }
             }}
             allowAutoFocus={!modalOpen}
-            layoutRevision={terminalLayoutRevision}
           />
         </div>
 
-        {!focusMode && (
-          <div className="right-panel">
-            <TaskDetailPanel session={activeSession} agentName={activeAgentName} />
-            <CodexQuotaPanel
-              session={activeSession}
-              output={activeSession ? sessionOutputs[activeSession.id] ?? '' : ''}
-              enabled={codexQuotaEnabled}
-              onEnabledChange={setCodexQuotaEnabled}
-              onRefresh={handleRefreshCodexQuota}
-            />
-          </div>
-        )}
+        <div className="right-panel">
+          <TaskDetailPanel session={activeSession} agentName={activeAgentName} />
+          <CodexQuotaPanel
+            session={activeSession}
+            output={activeSession ? sessionOutputs[activeSession.id] ?? '' : ''}
+            enabled={codexQuotaEnabled}
+            onEnabledChange={setCodexQuotaEnabled}
+            onRefresh={handleRefreshCodexQuota}
+          />
+        </div>
 
       </div>
 
