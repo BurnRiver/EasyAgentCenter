@@ -277,6 +277,7 @@ export default function App() {
   const [sessionNotificationsEnabled, setSessionNotificationsEnabledState] = useState(getInitialSessionNotificationsEnabled)
   const [isBooting, setIsBooting] = useState(true)
   const [focusMode, setFocusMode] = useState(false)
+  const [terminalLayoutRevision, setTerminalLayoutRevision] = useState(0)
   const sessionsRef = useRef<SessionInfo[]>([])
   const allAgentsRef = useRef<Record<string, AgentInstall | null>>({})
   const sessionNotificationsEnabledRef = useRef(sessionNotificationsEnabled)
@@ -608,7 +609,10 @@ export default function App() {
           </button>
           <button
             className={`btn btn-secondary ${focusMode ? 'active' : ''}`}
-            onClick={() => setFocusMode((current) => !current)}
+            onClick={() => {
+              setFocusMode((current) => !current)
+              setTerminalLayoutRevision((current) => current + 1)
+            }}
           >
             {focusMode ? t('btn.exitFocusMode') : t('btn.focusMode')}
           </button>
@@ -665,6 +669,7 @@ export default function App() {
               }
             }}
             allowAutoFocus={!modalOpen}
+            layoutRevision={terminalLayoutRevision}
           />
         </div>
 

@@ -12,6 +12,7 @@ interface Props {
   onSendInput: (data: string) => void
   onResize: (cols: number, rows: number) => void
   allowAutoFocus: boolean
+  layoutRevision: number
 }
 
 function appendRenderedOutput(previous: string, chunk: string): string {
@@ -27,6 +28,7 @@ export default function TerminalPane({
   onSendInput,
   onResize,
   allowAutoFocus,
+  layoutRevision,
 }: Props) {
   const { t } = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -42,6 +44,7 @@ export default function TerminalPane({
   const compositionStartedAtRef = useRef(0)
   const compositionDataRef = useRef('')
   const lastDataRef = useRef({ text: '', at: 0 })
+  const layoutRevisionRef = useRef(layoutRevision)
 
   useEffect(() => {
     onSendInputRef.current = onSendInput
@@ -268,6 +271,30 @@ export default function TerminalPane({
       })
     }
   }, [fitTerminal, output, session?.id, session?.status, t])
+
+  useEffect(() => {
+    const terminal = terminalRef.current
+    if (!terminal || !session || layoutRevisionRef.current === layoutRevision) return
+    layoutRevisionRef.current = layoutRevision
+
+    const replayOutput = output || renderedOutputRef.current
+    requestAnimationFrame(() => {
+      fitTerminal()
+      requestAnimationFrame(() => {
+        fitTerminal()
+        if (replayOutput) {
+          terminal.reset()
+          terminal.write(replayOutput)
+          renderedOutputRef.current = replayOutput
+          renderedSessionIdRef.current = session.id
+        }
+        terminal.scrollToBottom()
+        if (canFocusTerminal()) {
+          terminal.focus()
+        }
+      })
+    })
+  }, [canFocusTerminal, fitTerminal, layoutRevision, output, session])
 
   useEffect(() => {
     if (!session) return
