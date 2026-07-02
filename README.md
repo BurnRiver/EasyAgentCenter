@@ -30,9 +30,9 @@ It is built for users who work with multiple coding agents at the same time: vie
 
 ## Privacy Notes
 
-EasyAgentCenter keeps session metadata and transcript logs locally on your computer. The app itself does not upload your session data and does not include API keys. Individual CLI agents may use their own login state or environment variables.
+EasyAgentCenter keeps session metadata and transcript logs locally on your computer. The app itself does not upload your session data and does not include API keys. Individual CLI agents may use their own login state, environment variables, or local configuration.
 
-In development builds, local `data/` and `logs/` folders are ignored by Git and should not be committed.
+If you run the project from source, the generated `data/` and `logs/` folders are only for local development. They are ignored by Git and should not be committed.
 
 ## Quick Start
 

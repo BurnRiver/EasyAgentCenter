@@ -30,7 +30,7 @@ Está pensado para personas que usan varios agentes de programación al mismo ti
 
 EasyAgentCenter guarda los metadatos de sesión y los registros de sesión localmente en tu computadora. La app no sube tus datos de sesión y no incluye API Key. Los CLI Agent individuales pueden usar su propio estado de inicio de sesión, variables de entorno o configuración local.
 
-En entornos de desarrollo, las carpetas locales `data/` y `logs/` están ignoradas por Git y no deben enviarse al repositorio.
+Si ejecutas el proyecto desde el código fuente, las carpetas generadas `data/` y `logs/` son solo para desarrollo local. Git las ignora y no deben enviarse al repositorio.
 
 ## Inicio rápido
 
