@@ -2,9 +2,11 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [Русский](README.ru.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Español](README.es.md)
 
-EasyAgentCenter es un administrador ligero y rápido para herramientas CLI Agent en Windows. Permite iniciar y gestionar Codex CLI, Kimi Code, Claude Code, Hermes y otros Agent populares desde un solo lugar, además de cualquier herramienta o comando personalizado que el usuario pueda ejecutar.
+EasyAgentCenter es un administrador ligero de escritorio para CLI coding agents en Windows.
 
-Está pensado para personas que usan varios agentes de programación al mismo tiempo: puedes ver sesiones por proyecto o por Agent, conversar directamente en el terminal integrado, iniciar rápidamente un directorio de proyecto y recibir notificaciones de escritorio cuando una sesión termina o falla. EasyAgentCenter no incluye API Key y no sube tus datos de sesión. Cada Agent sigue usando su propio estado de inicio de sesión y configuración local.
+EasyAgentCenter reúne Codex CLI, Claude Code, Kimi Code, Hermes y CLI Agent personalizados en una sola ventana, con sesiones por proyecto, terminal PTY integrado, notificaciones de escritorio y exportación a Markdown.
+
+Está pensado para personas que usan varios agentes de programación al mismo tiempo: puedes ver sesiones por proyecto o por Agent, conversar directamente en el terminal integrado, iniciar rápidamente un directorio de proyecto y reiniciar o exportar sesiones desde el menú contextual. EasyAgentCenter no incluye API Key y no sube tus datos de sesión. Cada Agent sigue usando su propio estado de inicio de sesión y configuración local.
 
 ## Capturas
 
@@ -18,13 +20,21 @@ Está pensado para personas que usan varios agentes de programación al mismo ti
 - Detecta automáticamente los CLI Agent instalados en PATH.
 - Permite agregar carpetas de proyecto e iniciar Agent rápidamente dentro del proyecto elegido.
 - Gestiona sesiones por proyecto o por Agent.
-- Detiene, elimina, elimina en lote, reordena y restaura registros de sesión.
+- Reinicia, detiene, elimina, elimina en lote, reordena y restaura registros de sesión.
 - Incluye un terminal PTY integrado para conversar directamente con los Agent.
+- Exporta transcripciones de sesión a Markdown.
 - Permite personalizar el color de fondo del terminal.
 - Panel opcional de cuota de Codex CLI para la salida de `/status` y `/usage`.
 - Ayuda con comandos de instalación/actualización para Agent conocidos.
 - Notificaciones de escritorio opcionales cuando una sesión termina o falla.
 - Idiomas de la interfaz: inglés, chino simplificado, ruso, japonés, coreano y español.
+
+## Roadmap
+
+- Personalización más detallada del tema del terminal y del diseño.
+- Experimentos de workflow / orquestación de automatización.
+
+Los elementos del roadmap son ideas, no promesas. Las prioridades dependen del uso real y del feedback.
 
 ## Privacidad
 
@@ -77,7 +87,8 @@ npm run dist
 
 ## Requisitos
 
-- Node.js 24.14.0, ver `.nvmrc` / `.node-version`
+- Los usuarios finales pueden descargar el exe portable y no necesitan Node.js.
+- El desarrollo desde código fuente usa Node.js 24.14.0, ver `.nvmrc` / `.node-version`
 - Windows es la plataforma principal
 
 ## Licencia

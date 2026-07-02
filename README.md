@@ -2,11 +2,11 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [Русский](README.ru.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Español](README.es.md)
 
-Lightweight Windows desktop manager for CLI coding agents such as Codex CLI, Kimi Code, Claude Code, OpenClaw, Hermes, PI coding agent, and custom shell commands.
+A lightweight Windows desktop manager for CLI coding agents.
 
-EasyAgentCenter focuses on agent session management and terminal interaction so the app can stay predictable, fast, and close to a native `cmd` / PowerShell experience.
+EasyAgentCenter brings Codex CLI, Claude Code, Kimi Code, Hermes, and custom CLI agents into one place, with project-based sessions, an embedded PTY terminal, desktop notifications, and Markdown export.
 
-It is built for users who work with multiple coding agents at the same time: view sessions by project or by agent, talk directly inside the embedded terminal, quick-start project folders, and receive desktop notifications when sessions finish or fail. EasyAgentCenter does not include API keys and does not upload your session data. Each agent still uses its own login state and local configuration.
+It is built for users who work with multiple coding agents at the same time: view sessions by project or by agent, talk directly inside the terminal, quick-start project folders, and restart or export sessions from the context menu. EasyAgentCenter does not include API keys and does not upload your session data. Each agent still uses its own login state and local configuration.
 
 ## Screenshots
 
@@ -20,13 +20,21 @@ It is built for users who work with multiple coding agents at the same time: vie
 - Discover installed CLI agents from PATH.
 - Add project folders and quick-start agents inside the chosen project.
 - Manage sessions by project or by agent.
-- Stop, delete, batch-delete, reorder, and restore session records.
+- Restart, stop, delete, batch-delete, reorder, and restore session records.
 - Use an embedded PTY terminal for direct agent conversation.
+- Export session transcripts to Markdown.
 - Customize the terminal background color.
 - Optional Codex CLI quota panel for `/status` and `/usage` output.
 - Install/update helper for known agents.
 - Optional desktop notification when a session finishes or fails.
 - UI languages: English, Simplified Chinese, Russian, Japanese, Korean, and Spanish.
+
+## Roadmap
+
+- More detailed terminal theme and layout customization.
+- Workflow / automation orchestration experiments.
+
+Roadmap items are ideas, not promises. Priorities depend on real usage and feedback.
 
 ## Privacy Notes
 
@@ -79,7 +87,8 @@ npm run dist
 
 ## Requirements
 
-- Node.js 24.14.0, see `.nvmrc` / `.node-version`
+- End users can download the portable exe and do not need Node.js.
+- Source development uses Node.js 24.14.0, see `.nvmrc` / `.node-version`
 - Windows is the primary target
 
 ## Project Structure
