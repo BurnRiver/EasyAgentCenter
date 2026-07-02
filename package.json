@@ -1,0 +1,48 @@
+{
+  "name": "easy-agent-center",
+  "version": "0.1.0",
+  "description": "EasyAgentCenter - lightweight CLI agent session manager",
+  "author": "EasyAgentCenter Contributors",
+  "license": "MIT",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "icon": "python scripts/generate-icon.py",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit",
+    "dist": "set CSC_IDENTITY_AUTO_DISCOVERY=false&& electron-vite build && electron-builder --win portable --config.win.signAndEditExecutable=false",
+    "dist:dir": "set CSC_IDENTITY_AUTO_DISCOVERY=false&& electron-vite build && electron-builder --win dir --config.win.signAndEditExecutable=false"
+  },
+  "build": {
+    "appId": "com.easyagentcenter.desktop",
+    "productName": "EasyAgentCenter",
+    "extraResources": [
+      {
+        "from": "assets/icon.ico",
+        "to": "icon.ico"
+      }
+    ],
+    "win": {
+      "icon": "assets/icon.ico"
+    }
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "0.10.0",
+    "@xterm/xterm": "5.5.0",
+    "node-pty": "1.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.43",
+    "@types/react": "18.3.31",
+    "@types/react-dom": "18.3.7",
+    "@vitejs/plugin-react": "4.7.0",
+    "electron": "28.3.3",
+    "electron-builder": "24.13.3",
+    "electron-vite": "2.3.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "typescript": "5.9.3",
+    "vite": "5.4.21"
+  }
+}
