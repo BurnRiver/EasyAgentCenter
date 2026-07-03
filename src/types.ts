@@ -82,3 +82,16 @@ export interface SessionNotificationPayload {
   body: string
 }
 
+export type ProjectEditor = 'vscode' | 'cursor'
+
+export interface AppUpdateInfo {
+  currentVersion: string
+  latestVersion?: string
+  hasUpdate: boolean
+  releaseName?: string
+  releaseUrl?: string
+  assetName?: string
+  assetUrl?: string
+  publishedAt?: string
+}
+

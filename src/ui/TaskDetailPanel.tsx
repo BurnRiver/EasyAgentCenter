@@ -1,9 +1,12 @@
 ﻿import { useI18n } from '../i18n'
-import type { SessionInfo } from '../types'
+import type { ProjectEditor, SessionInfo } from '../types'
 
 interface Props {
   session: SessionInfo | null
   agentName: string
+  onOpenProjectDirectory: (cwd: string) => void
+  onCopyProjectPath: (cwd: string) => void
+  onOpenProjectEditor: (editor: ProjectEditor, cwd: string) => void
 }
 
 const statusKeyMap: Record<string, string> = {
@@ -22,7 +25,13 @@ const statusColor: Record<string, string> = {
   closed: '#888',
 }
 
-export default function TaskDetailPanel({ session, agentName }: Props) {
+export default function TaskDetailPanel({
+  session,
+  agentName,
+  onOpenProjectDirectory,
+  onCopyProjectPath,
+  onOpenProjectEditor,
+}: Props) {
   const { t } = useI18n()
 
   if (!session) {
@@ -56,6 +65,40 @@ export default function TaskDetailPanel({ session, agentName }: Props) {
         <div className="detail-row">
           <span className="detail-label">{t('detail.cwd')}</span>
           <span className="detail-value mono">{session.cwd}</span>
+        </div>
+        <div className="detail-project-actions">
+          <button
+            type="button"
+            className="btn btn-secondary btn-xs"
+            onClick={() => onOpenProjectDirectory(session.cwd)}
+            title={t('projectAction.openFolder')}
+          >
+            {t('projectAction.openFolder')}
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary btn-xs"
+            onClick={() => onCopyProjectPath(session.cwd)}
+            title={t('projectAction.copyPath')}
+          >
+            {t('projectAction.copyPath')}
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary btn-xs"
+            onClick={() => onOpenProjectEditor('vscode', session.cwd)}
+            title={t('projectAction.openVSCode')}
+          >
+            VS Code
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary btn-xs"
+            onClick={() => onOpenProjectEditor('cursor', session.cwd)}
+            title={t('projectAction.openCursor')}
+          >
+            Cursor
+          </button>
         </div>
         <div className="detail-row">
           <span className="detail-label">{t('detail.sessionId')}</span>

@@ -6,9 +6,16 @@ import type {
   SessionInfo,
   ResolvedCommandFile,
   SessionNotificationPayload,
+  AppUpdateInfo,
+  ProjectEditor,
 } from '../src/types'
 
 export interface EasyAgentCenterAPI {
+  getAppVersion: () => Promise<string>
+  checkAppUpdate: () => Promise<AppUpdateInfo>
+  openExternalUrl: (url: string) => Promise<boolean>
+  openPath: (targetPath: string) => Promise<string>
+  openProjectInEditor: (editor: ProjectEditor, cwd: string) => Promise<boolean>
   discoverAgents: () => Promise<Record<string, AgentInstall | null>>
   createSession: (config: SessionConfig) => Promise<SessionInfo>
   openCodexThread: (cwd: string, prompt?: string) => Promise<boolean>
@@ -37,6 +44,12 @@ export interface EasyAgentCenterAPI {
 }
 
 const easyAgentCenter: EasyAgentCenterAPI = {
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  checkAppUpdate: () => ipcRenderer.invoke('check-app-update'),
+  openExternalUrl: (url: string) => ipcRenderer.invoke('open-external-url', url),
+  openPath: (targetPath: string) => ipcRenderer.invoke('open-path', targetPath),
+  openProjectInEditor: (editor: ProjectEditor, cwd: string) =>
+    ipcRenderer.invoke('open-project-in-editor', editor, cwd),
   discoverAgents: () => ipcRenderer.invoke('discover-agents'),
   createSession: (config: SessionConfig) => ipcRenderer.invoke('create-session', config),
   openCodexThread: (cwd: string, prompt?: string) =>

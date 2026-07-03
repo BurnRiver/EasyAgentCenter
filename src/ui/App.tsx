@@ -15,11 +15,18 @@ import type {
   CustomAgent,
   ResolvedCommandFile,
   SessionNotificationPayload,
+  AppUpdateInfo,
+  ProjectEditor,
 } from '../types'
 
 declare global {
   interface Window {
     easyAgentCenter: {
+      getAppVersion: () => Promise<string>
+      checkAppUpdate: () => Promise<AppUpdateInfo>
+      openExternalUrl: (url: string) => Promise<boolean>
+      openPath: (targetPath: string) => Promise<string>
+      openProjectInEditor: (editor: ProjectEditor, cwd: string) => Promise<boolean>
       discoverAgents: () => Promise<Record<string, AgentInstall | null>>
       createSession: (config: SessionConfig) => Promise<SessionInfo>
       openCodexThread: (cwd: string, prompt?: string) => Promise<boolean>
@@ -634,6 +641,26 @@ export default function App() {
     }, 600)
   }, [activeSessionId])
 
+  const handleOpenProjectDirectory = useCallback(async (cwd: string) => {
+    const error = await window.easyAgentCenter.openPath(cwd)
+    if (error) {
+      window.alert(t('projectAction.openFolderFailed', { message: error }))
+    }
+  }, [t])
+
+  const handleCopyProjectPath = useCallback((cwd: string) => {
+    window.easyAgentCenter.writeClipboardText(cwd)
+    window.alert(t('projectAction.pathCopied'))
+  }, [t])
+
+  const handleOpenProjectEditor = useCallback(async (editor: ProjectEditor, cwd: string) => {
+    const editorName = editor === 'vscode' ? 'VS Code' : 'Cursor'
+    const opened = await window.easyAgentCenter.openProjectInEditor(editor, cwd)
+    if (!opened) {
+      window.alert(t('projectAction.openEditorFailed', { editor: editorName }))
+    }
+  }, [t])
+
   const activeSession = sessions.find((s) => s.id === activeSessionId) || null
   const activeAgentName = activeSession
     ? agentDisplayName(activeSession.agentId, allAgents[activeSession.agentId], t)
@@ -699,6 +726,9 @@ export default function App() {
             setShowCreateModal(true)
           }}
           onQuickStart={handleQuickStart}
+          onOpenProjectDirectory={handleOpenProjectDirectory}
+          onCopyProjectPath={handleCopyProjectPath}
+          onOpenProjectEditor={handleOpenProjectEditor}
           defaultCwd={activeSession?.cwd || defaultCwd}
         />
 
@@ -723,7 +753,13 @@ export default function App() {
         </div>
 
         <div className="right-panel">
-          <TaskDetailPanel session={activeSession} agentName={activeAgentName} />
+          <TaskDetailPanel
+            session={activeSession}
+            agentName={activeAgentName}
+            onOpenProjectDirectory={handleOpenProjectDirectory}
+            onCopyProjectPath={handleCopyProjectPath}
+            onOpenProjectEditor={handleOpenProjectEditor}
+          />
           <CodexQuotaPanel
             session={activeSession}
             output={activeSession ? sessionOutputs[activeSession.id] ?? '' : ''}
@@ -906,10 +942,29 @@ function OptionsModal({
   const [selectedLocale, setSelectedLocale] = useState<Locale>(locale)
   const [draftAppearance, setDraftAppearance] = useState<AppearanceSettings>(appearance)
   const [draftSessionNotificationsEnabled, setDraftSessionNotificationsEnabled] = useState(sessionNotificationsEnabled)
+  const [appVersion, setAppVersion] = useState('')
+  const [appUpdateInfo, setAppUpdateInfo] = useState<AppUpdateInfo | null>(null)
+  const [appUpdateChecking, setAppUpdateChecking] = useState(false)
+  const [appUpdateError, setAppUpdateError] = useState('')
   const languageRef = useRef<HTMLSelectElement>(null)
   const originalLocaleRef = useRef(locale)
   const originalAppearanceRef = useRef(appearance)
   const originalSessionNotificationsEnabledRef = useRef(sessionNotificationsEnabled)
+
+  useEffect(() => {
+    let cancelled = false
+    window.easyAgentCenter.getAppVersion()
+      .then((version) => {
+        if (!cancelled) setAppVersion(version)
+      })
+      .catch(() => {
+        if (!cancelled) setAppVersion('')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     languageRef.current?.focus()
@@ -950,6 +1005,26 @@ function OptionsModal({
     const filePath = getDroppedFilePath(event)
     if (!filePath) return
     setDraftAppearance((prev) => ({ ...prev, backgroundMode: 'image', customImagePath: filePath }))
+  }
+
+  const handleCheckAppUpdate = async () => {
+    setAppUpdateChecking(true)
+    setAppUpdateError('')
+    try {
+      const updateInfo = await window.easyAgentCenter.checkAppUpdate()
+      setAppVersion(updateInfo.currentVersion)
+      setAppUpdateInfo(updateInfo)
+    } catch (err) {
+      setAppUpdateInfo(null)
+      setAppUpdateError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setAppUpdateChecking(false)
+    }
+  }
+
+  const openUpdateUrl = (url?: string) => {
+    if (!url) return
+    void window.easyAgentCenter.openExternalUrl(url)
   }
 
   const backgroundModes: BackgroundMode[] = ['dark', 'white', 'paper', 'image']
@@ -1069,6 +1144,59 @@ function OptionsModal({
               <small>{t('options.sessionNotificationsHint')}</small>
             </span>
           </label>
+        </div>
+
+        <div className="options-section">
+          <div className="options-label">{t('appUpdate.title')}</div>
+          <div className="app-update-panel">
+            <div className="app-update-main">
+              <strong>{t('appUpdate.currentVersion', { version: appVersion || '--' })}</strong>
+              {appUpdateInfo?.assetName && <small>{appUpdateInfo.assetName}</small>}
+            </div>
+
+            {appUpdateError ? (
+              <div className="app-update-status error">
+                {t('appUpdate.failed', { message: appUpdateError })}
+              </div>
+            ) : appUpdateInfo ? (
+              <div className={`app-update-status ${appUpdateInfo.hasUpdate ? 'available' : 'current'}`}>
+                {appUpdateInfo.latestVersion
+                  ? appUpdateInfo.hasUpdate
+                    ? t('appUpdate.available', { version: appUpdateInfo.latestVersion })
+                    : t('appUpdate.upToDate')
+                  : t('appUpdate.noStableRelease')}
+              </div>
+            ) : null}
+
+            <div className="app-update-actions">
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={handleCheckAppUpdate}
+                disabled={appUpdateChecking}
+              >
+                {appUpdateChecking ? t('appUpdate.checking') : t('appUpdate.check')}
+              </button>
+              {appUpdateInfo?.releaseUrl && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => openUpdateUrl(appUpdateInfo.releaseUrl)}
+                >
+                  {t('appUpdate.openRelease')}
+                </button>
+              )}
+              {appUpdateInfo?.hasUpdate && appUpdateInfo.assetUrl && (
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => openUpdateUrl(appUpdateInfo.assetUrl)}
+                >
+                  {t('appUpdate.download')}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="modal-actions">

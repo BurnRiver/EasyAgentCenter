@@ -551,6 +551,15 @@ body {
   flex-shrink: 0;
 }
 
+.project-pin-btn {
+  color: #777780;
+}
+
+.project-pin-btn:hover,
+.project-pin-btn.active {
+  color: #f0c85a;
+}
+
 .session-group-body {
   /* indent session items slightly under their group */
 }
@@ -735,6 +744,18 @@ body {
 .detail-value.mono {
   font-family: 'Consolas', 'Courier New', monospace;
   font-size: 11px;
+}
+
+.detail-project-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 1px 0 2px;
+}
+
+.detail-project-actions .btn {
+  width: 100%;
+  padding-inline: 6px;
 }
 
 /* === Codex Quota Panel === */
@@ -1183,6 +1204,68 @@ body {
   line-height: 1.35;
 }
 
+.app-update-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(70, 70, 78, 0.75);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.app-update-main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-update-main strong {
+  color: #e0e0e0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.app-update-main small {
+  overflow: hidden;
+  color: #85858f;
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-update-status {
+  border-radius: 4px;
+  padding: 7px 8px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.app-update-status.current {
+  background: rgba(70, 170, 120, 0.11);
+  color: #8ed7af;
+}
+
+.app-update-status.available {
+  background: rgba(233, 69, 96, 0.13);
+  color: #ff9cad;
+}
+
+.app-update-status.error {
+  background: rgba(233, 69, 96, 0.1);
+  color: #ff7f92;
+}
+
+.app-update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .custom-agent-modal {
   max-height: 88vh;
   display: flex;
@@ -1627,7 +1710,9 @@ body {
 .app-background-white .options-check-row,
 .app-background-paper .options-check-row,
 .app-background-white .image-path-section,
-.app-background-paper .image-path-section {
+.app-background-paper .image-path-section,
+.app-background-white .app-update-panel,
+.app-background-paper .app-update-panel {
   background: rgba(255, 255, 255, 0.42);
   border-color: var(--theme-border);
   color: var(--theme-text);
@@ -1689,7 +1774,9 @@ body {
 .app-background-white .agent-update-note,
 .app-background-paper .agent-update-note,
 .app-background-white .options-check-row small,
-.app-background-paper .options-check-row small {
+.app-background-paper .options-check-row small,
+.app-background-white .app-update-main small,
+.app-background-paper .app-update-main small {
   color: var(--theme-muted);
 }
 
@@ -1699,6 +1786,8 @@ body {
 .app-background-paper .detail-value,
 .app-background-white .quota-meter-top strong,
 .app-background-paper .quota-meter-top strong,
+.app-background-white .app-update-main strong,
+.app-background-paper .app-update-main strong,
 .app-background-white .agent-name,
 .app-background-paper .agent-name,
 .app-background-white .agent-visibility-name,

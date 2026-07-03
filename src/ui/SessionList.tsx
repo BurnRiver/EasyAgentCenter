@@ -1,12 +1,13 @@
 ﻿import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useI18n } from '../i18n'
-import type { SessionInfo, AgentInstall, SessionConfig } from '../types'
+import type { SessionInfo, AgentInstall, SessionConfig, ProjectEditor } from '../types'
 import type { DragEvent, MouseEvent } from 'react'
 
 export type ViewMode = 'project' | 'agent'
 
 const VIEW_MODE_KEY = 'easy-agent-center-view-mode'
 const PROJECTS_KEY = 'easy-agent-center-projects-v1'
+const PINNED_PROJECTS_KEY = 'easy-agent-center-pinned-projects-v1'
 const LAST_PROJECT_KEY = 'easy-agent-center-last-project'
 const AGENT_DRAG_MIME = 'application/x-easy-agent-center-agent-id'
 const HIDDEN_AGENT_IDS = new Set(['codex-app'])
@@ -38,6 +39,9 @@ interface Props {
   onDuplicateSession: (session: SessionInfo) => void
   onCreateForAgent: (agentId: string) => void
   onQuickStart?: (config: SessionConfig) => Promise<SessionInfo | null>
+  onOpenProjectDirectory: (cwd: string) => void
+  onCopyProjectPath: (cwd: string) => void
+  onOpenProjectEditor: (editor: ProjectEditor, cwd: string) => void
   defaultCwd: string
 }
 
@@ -129,6 +133,30 @@ function readSavedProjects(): string[] {
 function writeSavedProjects(projects: string[]): void {
   try {
     localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects))
+  } catch {
+    // ignore
+  }
+}
+
+function readPinnedProjectKeys(): Set<string> {
+  try {
+    const raw = localStorage.getItem(PINNED_PROJECTS_KEY)
+    if (!raw) return new Set()
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return new Set()
+    return new Set(
+      parsed
+        .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+        .map(normalizeCwd)
+    )
+  } catch {
+    return new Set()
+  }
+}
+
+function writePinnedProjectKeys(projectKeys: Set<string>): void {
+  try {
+    localStorage.setItem(PINNED_PROJECTS_KEY, JSON.stringify([...projectKeys]))
   } catch {
     // ignore
   }
@@ -231,6 +259,9 @@ export default function SessionList({
   onDuplicateSession,
   onCreateForAgent,
   onQuickStart,
+  onOpenProjectDirectory,
+  onCopyProjectPath,
+  onOpenProjectEditor,
   defaultCwd,
 }: Props) {
   const { t } = useI18n()
@@ -240,6 +271,7 @@ export default function SessionList({
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(new Set())
   const [savedProjects, setSavedProjects] = useState<string[]>(readSavedProjects)
+  const [pinnedProjectKeys, setPinnedProjectKeys] = useState<Set<string>>(readPinnedProjectKeys)
   const [lastProjectCwd, setLastProjectCwd] = useState(readLastProject)
   const [archivedCollapsed, setArchivedCollapsed] = useState(true)
   const [contextMenu, setContextMenu] = useState<{
@@ -313,7 +345,33 @@ export default function SessionList({
     if (!window.confirm(t('sessionList.confirmRemoveProject', { project }))) return
     const target = normalizeCwd(project)
     persistProjects(savedProjects.filter((item) => normalizeCwd(item) !== target))
+    setPinnedProjectKeys((prev) => {
+      if (!prev.has(target)) return prev
+      const next = new Set(prev)
+      next.delete(target)
+      writePinnedProjectKeys(next)
+      return next
+    })
   }, [persistProjects, savedProjects, t])
+
+  const togglePinnedProject = useCallback((project: string) => {
+    const trimmed = project.trim()
+    if (!trimmed) return
+
+    const key = normalizeCwd(trimmed)
+    const nextPinnedProjectKeys = new Set(pinnedProjectKeys)
+    if (nextPinnedProjectKeys.has(key)) {
+      nextPinnedProjectKeys.delete(key)
+    } else {
+      nextPinnedProjectKeys.add(key)
+      if (!savedProjects.some((item) => normalizeCwd(item) === key)) {
+        persistProjects([...savedProjects, trimmed])
+      }
+      rememberProject(trimmed)
+    }
+    setPinnedProjectKeys(nextPinnedProjectKeys)
+    writePinnedProjectKeys(nextPinnedProjectKeys)
+  }, [pinnedProjectKeys, persistProjects, rememberProject, savedProjects])
 
   useEffect(() => {
     if (!contextMenu) return
@@ -335,18 +393,39 @@ export default function SessionList({
 
   // Build groups based on view mode.
   const groups = useMemo(() => {
-    const map = new Map<string, { label: string; title: string; sessions: SessionInfo[]; savedProject?: boolean }>()
+    const map = new Map<string, {
+      label: string
+      title: string
+      sessions: SessionInfo[]
+      savedProject?: boolean
+      pinnedProject?: boolean
+    }>()
     if (viewMode === 'project') {
       for (const project of savedProjects) {
         const key = normalizeCwd(project)
         if (!map.has(key)) {
-          map.set(key, { label: dirLabel(project), title: project, sessions: [], savedProject: true })
+          map.set(key, {
+            label: dirLabel(project),
+            title: project,
+            sessions: [],
+            savedProject: true,
+            pinnedProject: pinnedProjectKeys.has(key),
+          })
+        } else {
+          map.get(key)!.pinnedProject = pinnedProjectKeys.has(key)
         }
       }
       for (const s of activeSessions) {
         const key = normalizeCwd(s.cwd)
         if (!map.has(key)) {
-          map.set(key, { label: dirLabel(s.cwd), title: s.cwd, sessions: [] })
+          map.set(key, {
+            label: dirLabel(s.cwd),
+            title: s.cwd,
+            sessions: [],
+            pinnedProject: pinnedProjectKeys.has(key),
+          })
+        } else {
+          map.get(key)!.pinnedProject = pinnedProjectKeys.has(key)
         }
         map.get(key)!.sessions.push(s)
       }
@@ -364,8 +443,12 @@ export default function SessionList({
         map.get(key)!.sessions.push(s)
       }
     }
-    return Array.from(map.entries()).map(([key, g]) => ({ key, ...g }))
-  }, [activeSessions, agents, savedProjects, t, viewMode])
+    const result = Array.from(map.entries()).map(([key, g]) => ({ key, ...g }))
+    if (viewMode === 'project') {
+      result.sort((a, b) => Number(Boolean(b.pinnedProject)) - Number(Boolean(a.pinnedProject)))
+    }
+    return result
+  }, [activeSessions, agents, pinnedProjectKeys, savedProjects, t, viewMode])
 
   // Remove stale selections when sessions change.
   useEffect(() => {
@@ -603,8 +686,8 @@ export default function SessionList({
 
   const contextMenuStyle = contextMenu
     ? {
-        left: Math.min(contextMenu.x, Math.max(8, window.innerWidth - 188)),
-        top: Math.min(contextMenu.y, Math.max(8, window.innerHeight - 236)),
+        left: Math.min(contextMenu.x, Math.max(8, window.innerWidth - 210)),
+        top: Math.min(contextMenu.y, Math.max(8, window.innerHeight - 380)),
       }
     : undefined
 
@@ -786,6 +869,19 @@ export default function SessionList({
                 )}
                 <span className="group-collapse-icon">{isCollapsed ? '▶' : '▼'}</span>
                 <span className="group-label">{group.label}</span>
+                {viewMode === 'project' && (
+                  <button
+                    type="button"
+                    className={`btn-icon btn-icon-compact project-pin-btn ${group.pinnedProject ? 'active' : ''}`}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      togglePinnedProject(group.title)
+                    }}
+                    title={group.pinnedProject ? t('sessionList.unpinProject') : t('sessionList.pinProject')}
+                  >
+                    {group.pinnedProject ? '★' : '☆'}
+                  </button>
+                )}
                 <span className="group-count">{group.sessions.length}</span>
                 {viewMode === 'project' && group.savedProject && (
                   <button
@@ -860,6 +956,42 @@ export default function SessionList({
             }}
           >
             {t('sessionList.exportMarkdown')}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onOpenProjectDirectory(contextMenu.session.cwd)
+              setContextMenu(null)
+            }}
+          >
+            {t('projectAction.openFolder')}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onCopyProjectPath(contextMenu.session.cwd)
+              setContextMenu(null)
+            }}
+          >
+            {t('projectAction.copyPath')}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onOpenProjectEditor('vscode', contextMenu.session.cwd)
+              setContextMenu(null)
+            }}
+          >
+            {t('projectAction.openVSCode')}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onOpenProjectEditor('cursor', contextMenu.session.cwd)
+              setContextMenu(null)
+            }}
+          >
+            {t('projectAction.openCursor')}
           </button>
           <button
             type="button"
