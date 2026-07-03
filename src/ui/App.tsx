@@ -5,6 +5,8 @@ import SessionList from './SessionList'
 import TerminalPane from './TerminalPane'
 import TaskDetailPanel from './TaskDetailPanel'
 import CodexQuotaPanel from './CodexQuotaPanel'
+import ClaudeUsagePanel from './ClaudeUsagePanel'
+import KimiUsagePanel from './KimiUsagePanel'
 import { getAgentPackageSpec } from '../agents/agent_update_catalog'
 import type { Locale } from '../i18n'
 import type {
@@ -86,6 +88,8 @@ const CUSTOM_AGENTS_KEY = 'easy-agent-center-custom-agents-v1'
 const HIDDEN_AGENT_IDS_KEY = 'easy-agent-center-hidden-agent-ids-v1'
 const APPEARANCE_KEY = 'easy-agent-center-appearance-v1'
 const SESSION_NOTIFICATIONS_ENABLED_KEY = 'easy-agent-center-session-notifications-enabled'
+const CLAUDE_USAGE_ENABLED_KEY = 'easy-agent-center-claude-usage-enabled'
+const KIMI_USAGE_ENABLED_KEY = 'easy-agent-center-kimi-usage-enabled'
 const RAW_OUTPUT_LIMIT = 240000
 const CLEAN_OUTPUT_LIMIT = 16000
 
@@ -152,6 +156,22 @@ function getInitialSessionNotificationsEnabled(): boolean {
     return stored === null ? true : stored === 'true'
   } catch {
     return true
+  }
+}
+
+function getInitialClaudeUsageEnabled(): boolean {
+  try {
+    return localStorage.getItem(CLAUDE_USAGE_ENABLED_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function getInitialKimiUsageEnabled(): boolean {
+  try {
+    return localStorage.getItem(KIMI_USAGE_ENABLED_KEY) === 'true'
+  } catch {
+    return false
   }
 }
 
@@ -290,6 +310,8 @@ export default function App() {
   const [initialAgentId, setInitialAgentId] = useState('generic')
   const [defaultCwd, setDefaultCwd] = useState('C:\\')
   const [codexQuotaEnabled, setCodexQuotaEnabledState] = useState(getInitialCodexQuotaEnabled)
+  const [claudeUsageEnabled, setClaudeUsageEnabledState] = useState(getInitialClaudeUsageEnabled)
+  const [kimiUsageEnabled, setKimiUsageEnabledState] = useState(getInitialKimiUsageEnabled)
   const [appearanceSettings, setAppearanceSettings] = useState<AppearanceSettings>(readAppearanceSettings)
   const [sessionNotificationsEnabled, setSessionNotificationsEnabledState] = useState(getInitialSessionNotificationsEnabled)
   const [isBooting, setIsBooting] = useState(true)
@@ -578,6 +600,24 @@ export default function App() {
     }
   }, [])
 
+  const setClaudeUsageEnabled = useCallback((enabled: boolean) => {
+    setClaudeUsageEnabledState(enabled)
+    try {
+      localStorage.setItem(CLAUDE_USAGE_ENABLED_KEY, String(enabled))
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  const setKimiUsageEnabled = useCallback((enabled: boolean) => {
+    setKimiUsageEnabledState(enabled)
+    try {
+      localStorage.setItem(KIMI_USAGE_ENABLED_KEY, String(enabled))
+    } catch {
+      // ignore
+    }
+  }, [])
+
   const setSessionNotificationsEnabled = useCallback((enabled: boolean) => {
     setSessionNotificationsEnabledState(enabled)
     writeSessionNotificationsEnabled(enabled)
@@ -639,6 +679,16 @@ export default function App() {
     window.setTimeout(() => {
       window.easyAgentCenter.sendInput(activeSessionId, '/usage\r')
     }, 600)
+  }, [activeSessionId])
+
+  const handleRefreshClaudeUsage = useCallback(() => {
+    if (!activeSessionId) return
+    window.easyAgentCenter.sendInput(activeSessionId, '/usage\r')
+  }, [activeSessionId])
+
+  const handleRefreshKimiUsage = useCallback(() => {
+    if (!activeSessionId) return
+    window.easyAgentCenter.sendInput(activeSessionId, '/usage\r')
   }, [activeSessionId])
 
   const handleOpenProjectDirectory = useCallback(async (cwd: string) => {
@@ -766,6 +816,20 @@ export default function App() {
             enabled={codexQuotaEnabled}
             onEnabledChange={setCodexQuotaEnabled}
             onRefresh={handleRefreshCodexQuota}
+          />
+          <ClaudeUsagePanel
+            session={activeSession}
+            output={activeSession ? sessionOutputs[activeSession.id] ?? '' : ''}
+            enabled={claudeUsageEnabled}
+            onEnabledChange={setClaudeUsageEnabled}
+            onRefresh={handleRefreshClaudeUsage}
+          />
+          <KimiUsagePanel
+            session={activeSession}
+            output={activeSession ? sessionOutputs[activeSession.id] ?? '' : ''}
+            enabled={kimiUsageEnabled}
+            onEnabledChange={setKimiUsageEnabled}
+            onRefresh={handleRefreshKimiUsage}
           />
         </div>
 
