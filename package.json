@@ -1,6 +1,6 @@
 {
   "name": "easy-agent-center",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "EasyAgentCenter - lightweight CLI agent session manager",
   "author": "EasyAgentCenter Contributors",
   "license": "MIT",
