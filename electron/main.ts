@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, writeFileSync } from 'node:fs'
 import { basename, dirname, extname, join } from 'node:path'
 import { app, ipcMain, BrowserWindow, dialog, shell, Notification } from 'electron'
@@ -7,7 +7,13 @@ import { sessionManager } from '../src/core/session_manager'
 import { discoverAgents } from '../src/discovery/agent_discovery'
 import { transcriptStore } from '../src/storage/transcript_store'
 import { buildSessionMarkdown, defaultMarkdownFileName } from '../src/storage/session_markdown_export'
-import type { AppUpdateInfo, ProjectEditor, ResolvedCommandFile, SessionNotificationPayload } from '../src/types'
+import type {
+  AppUpdateInfo,
+  OpenCCSwitchResult,
+  ProjectEditor,
+  ResolvedCommandFile,
+  SessionNotificationPayload,
+} from '../src/types'
 
 let mainWindow: BrowserWindow | null = null
 const UPDATE_REPOSITORY = 'BurnRiver/EasyAgentCenter'
@@ -188,6 +194,35 @@ function commandExists(command: string): Promise<boolean> {
   })
 }
 
+function launchDetached(
+  command: string,
+  args: string[] = [],
+  options: { cwd?: string; shell?: boolean } = {}
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    let settled = false
+    const child = spawn(command, args, {
+      cwd: options.cwd,
+      detached: true,
+      shell: options.shell ?? false,
+      stdio: 'ignore',
+      windowsHide: true,
+    })
+
+    const finish = (opened: boolean) => {
+      if (settled) return
+      settled = true
+      resolve(opened)
+    }
+
+    child.once('error', () => finish(false))
+    child.once('spawn', () => {
+      child.unref()
+      finish(true)
+    })
+  })
+}
+
 async function openProjectInEditor(editor: ProjectEditor, cwd: string): Promise<boolean> {
   const trimmedCwd = cwd.trim()
   if (!trimmedCwd || !existsSync(trimmedCwd)) return false
@@ -195,20 +230,126 @@ async function openProjectInEditor(editor: ProjectEditor, cwd: string): Promise<
   const command = editorCommand(editor)
   if (!await commandExists(command)) return false
 
-  return new Promise((resolve) => {
-    const child = spawn(command, [trimmedCwd], {
-      detached: true,
-      shell: true,
-      stdio: 'ignore',
-      windowsHide: true,
-    })
+  return launchDetached(command, [trimmedCwd], { shell: true })
+}
 
-    child.once('error', () => resolve(false))
-    child.once('spawn', () => {
-      child.unref()
-      resolve(true)
+function collectRegistryCCSwitchPaths(): string[] {
+  if (process.platform !== 'win32') return []
+
+  const roots = [
+    'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+    'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+    'HKLM\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+  ]
+  const paths: string[] = []
+
+  for (const root of roots) {
+    const result = spawnSync('reg.exe', ['query', root, '/s'], {
+      encoding: 'utf8',
+      windowsHide: true,
+      maxBuffer: 8 * 1024 * 1024,
     })
-  })
+    if (result.status !== 0 || !result.stdout) continue
+
+    for (const block of result.stdout.split(/\r?\n\r?\n/)) {
+      const displayName = block.match(/DisplayName\s+REG_\w+\s+(.+)/i)?.[1]?.trim() ?? ''
+      const installLocation = block.match(/InstallLocation\s+REG_\w+\s+(.+)/i)?.[1]?.trim() ?? ''
+      const displayIcon = block.match(/DisplayIcon\s+REG_\w+\s+(.+)/i)?.[1]?.trim() ?? ''
+      const matchesCCSwitch = /cc\s*switch|cc-switch|ccswitch/i.test(`${displayName} ${installLocation} ${displayIcon}`)
+      if (!matchesCCSwitch) continue
+
+      if (installLocation) {
+        paths.push(installLocation)
+      }
+      if (displayIcon) {
+        paths.push(displayIcon.replace(/,\d+$/, ''))
+      }
+    }
+  }
+
+  return paths
+}
+
+function uniquePaths(paths: string[]): string[] {
+  const seen = new Set<string>()
+  const result: string[] = []
+  for (const path of paths) {
+    const trimmed = path.trim()
+    if (!trimmed) continue
+    const key = trimmed.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    result.push(trimmed)
+  }
+  return result
+}
+
+function existingCCSwitchPaths(): string[] {
+  const localAppData = process.env.LOCALAPPDATA
+  const appData = process.env.APPDATA
+  const userProfile = process.env.USERPROFILE
+  const programData = process.env.ProgramData
+  const programFiles = process.env.ProgramFiles
+  const programFilesX86 = process.env['ProgramFiles(x86)']
+  const registryPaths = collectRegistryCCSwitchPaths()
+  const candidateDirs = [
+    localAppData && join(localAppData, 'Programs', 'CC Switch'),
+    localAppData && join(localAppData, 'Programs', 'cc-switch'),
+    localAppData && join(localAppData, 'CC Switch'),
+    appData && join(appData, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'CC Switch'),
+    programData && join(programData, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'CC Switch'),
+    userProfile && join(userProfile, 'Desktop'),
+    programFiles && join(programFiles, 'CC Switch'),
+    programFilesX86 && join(programFilesX86, 'CC Switch'),
+    ...registryPaths.filter((path) => !extname(path)),
+  ].filter((item): item is string => Boolean(item))
+
+  const names = [
+    'CC Switch.exe',
+    'CC-Switch.exe',
+    'CCSwitch.exe',
+    'cc-switch.exe',
+    'ccswitch.exe',
+    'CC Switch.lnk',
+    'CC-Switch.lnk',
+    'CCSwitch.lnk',
+  ]
+  return uniquePaths([
+    ...registryPaths.filter((path) => extname(path)),
+    ...candidateDirs
+    .flatMap((directory) => names.map((name) => join(directory, name)))
+    .filter((path) => existsSync(path)),
+  ])
+}
+
+async function openCCSwitch(): Promise<OpenCCSwitchResult> {
+  for (const filePath of existingCCSwitchPaths()) {
+    const opened = extname(filePath).toLowerCase() === '.lnk'
+      ? await shell.openPath(filePath).then((error) => !error)
+      : await launchDetached(filePath, [], { cwd: dirname(filePath) })
+    if (opened) {
+      return { opened: true, source: filePath }
+    }
+  }
+
+  for (const command of ['cc-switch', 'ccswitch']) {
+    if (await commandExists(command)) {
+      const opened = await launchDetached(command, [], { shell: true })
+      if (opened) {
+        return { opened: true, source: command }
+      }
+    }
+  }
+
+  try {
+    await shell.openExternal('ccswitch://')
+    return { opened: true, source: 'ccswitch://' }
+  } catch {
+    return {
+      opened: false,
+      message: 'CC Switch was not found. Install the desktop app or add cc-switch to PATH.',
+    }
+  }
 }
 
 function setupIPC() {
@@ -241,6 +382,10 @@ function setupIPC() {
   ipcMain.handle('open-project-in-editor', async (_event, editor: ProjectEditor, cwd: string) => {
     if (editor !== 'vscode' && editor !== 'cursor') return false
     return openProjectInEditor(editor, cwd)
+  })
+
+  ipcMain.handle('open-cc-switch', async () => {
+    return openCCSwitch()
   })
 
   ipcMain.handle('discover-agents', async () => {

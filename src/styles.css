@@ -758,6 +758,18 @@ body {
   padding-inline: 6px;
 }
 
+.detail-agent-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  margin: 0 0 2px;
+}
+
+.detail-agent-actions .btn {
+  width: 100%;
+  padding-inline: 6px;
+}
+
 /* === Codex Quota Panel === */
 .quota-panel {
   padding: 10px;

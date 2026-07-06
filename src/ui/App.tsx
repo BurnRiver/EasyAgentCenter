@@ -19,6 +19,7 @@ import type {
   SessionNotificationPayload,
   AppUpdateInfo,
   ProjectEditor,
+  OpenCCSwitchResult,
 } from '../types'
 
 declare global {
@@ -29,6 +30,7 @@ declare global {
       openExternalUrl: (url: string) => Promise<boolean>
       openPath: (targetPath: string) => Promise<string>
       openProjectInEditor: (editor: ProjectEditor, cwd: string) => Promise<boolean>
+      openCCSwitch: () => Promise<OpenCCSwitchResult>
       discoverAgents: () => Promise<Record<string, AgentInstall | null>>
       createSession: (config: SessionConfig) => Promise<SessionInfo>
       openCodexThread: (cwd: string, prompt?: string) => Promise<boolean>
@@ -711,6 +713,13 @@ export default function App() {
     }
   }, [t])
 
+  const handleOpenCCSwitch = useCallback(async () => {
+    const result = await window.easyAgentCenter.openCCSwitch()
+    if (!result.opened) {
+      window.alert(t('projectAction.openCCSwitchFailed', { message: result.message ?? 'not found' }))
+    }
+  }, [t])
+
   const activeSession = sessions.find((s) => s.id === activeSessionId) || null
   const activeAgentName = activeSession
     ? agentDisplayName(activeSession.agentId, allAgents[activeSession.agentId], t)
@@ -809,6 +818,7 @@ export default function App() {
             onOpenProjectDirectory={handleOpenProjectDirectory}
             onCopyProjectPath={handleCopyProjectPath}
             onOpenProjectEditor={handleOpenProjectEditor}
+            onOpenCCSwitch={handleOpenCCSwitch}
           />
           <CodexQuotaPanel
             session={activeSession}

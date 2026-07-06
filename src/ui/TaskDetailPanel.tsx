@@ -7,6 +7,7 @@ interface Props {
   onOpenProjectDirectory: (cwd: string) => void
   onCopyProjectPath: (cwd: string) => void
   onOpenProjectEditor: (editor: ProjectEditor, cwd: string) => void
+  onOpenCCSwitch: () => void
 }
 
 const statusKeyMap: Record<string, string> = {
@@ -31,6 +32,7 @@ export default function TaskDetailPanel({
   onOpenProjectDirectory,
   onCopyProjectPath,
   onOpenProjectEditor,
+  onOpenCCSwitch,
 }: Props) {
   const { t } = useI18n()
 
@@ -100,6 +102,18 @@ export default function TaskDetailPanel({
             Cursor
           </button>
         </div>
+        {session.agentId === 'claude' && (
+          <div className="detail-agent-actions">
+            <button
+              type="button"
+              className="btn btn-secondary btn-xs"
+              onClick={onOpenCCSwitch}
+              title={t('projectAction.openCCSwitch')}
+            >
+              {t('projectAction.openCCSwitch')}
+            </button>
+          </div>
+        )}
         <div className="detail-row">
           <span className="detail-label">{t('detail.sessionId')}</span>
           <span className="detail-value mono">{session.id}</span>

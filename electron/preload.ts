@@ -8,6 +8,7 @@ import type {
   SessionNotificationPayload,
   AppUpdateInfo,
   ProjectEditor,
+  OpenCCSwitchResult,
 } from '../src/types'
 
 export interface EasyAgentCenterAPI {
@@ -16,6 +17,7 @@ export interface EasyAgentCenterAPI {
   openExternalUrl: (url: string) => Promise<boolean>
   openPath: (targetPath: string) => Promise<string>
   openProjectInEditor: (editor: ProjectEditor, cwd: string) => Promise<boolean>
+  openCCSwitch: () => Promise<OpenCCSwitchResult>
   discoverAgents: () => Promise<Record<string, AgentInstall | null>>
   createSession: (config: SessionConfig) => Promise<SessionInfo>
   openCodexThread: (cwd: string, prompt?: string) => Promise<boolean>
@@ -50,6 +52,7 @@ const easyAgentCenter: EasyAgentCenterAPI = {
   openPath: (targetPath: string) => ipcRenderer.invoke('open-path', targetPath),
   openProjectInEditor: (editor: ProjectEditor, cwd: string) =>
     ipcRenderer.invoke('open-project-in-editor', editor, cwd),
+  openCCSwitch: () => ipcRenderer.invoke('open-cc-switch'),
   discoverAgents: () => ipcRenderer.invoke('discover-agents'),
   createSession: (config: SessionConfig) => ipcRenderer.invoke('create-session', config),
   openCodexThread: (cwd: string, prompt?: string) =>

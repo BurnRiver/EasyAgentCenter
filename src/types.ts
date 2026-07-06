@@ -84,6 +84,12 @@ export interface SessionNotificationPayload {
 
 export type ProjectEditor = 'vscode' | 'cursor'
 
+export interface OpenCCSwitchResult {
+  opened: boolean
+  source?: string
+  message?: string
+}
+
 export interface AppUpdateInfo {
   currentVersion: string
   latestVersion?: string

@@ -127,9 +127,11 @@ const translations: Record<Locale, Partial<Record<string, string>>> = {
     'projectAction.copyPath': 'Copy path',
     'projectAction.openVSCode': 'Open in VS Code',
     'projectAction.openCursor': 'Open in Cursor',
+    'projectAction.openCCSwitch': 'Open CC Switch',
     'projectAction.pathCopied': 'Project path copied.',
     'projectAction.openFolderFailed': 'Failed to open folder: {message}',
     'projectAction.openEditorFailed': 'Failed to open {editor}. Make sure its command is available in PATH.',
+    'projectAction.openCCSwitchFailed': 'Failed to open CC Switch: {message}',
     // Status
     'status.idle': 'Idle',
     'status.running': 'Running',
@@ -334,9 +336,11 @@ const translations: Record<Locale, Partial<Record<string, string>>> = {
     'projectAction.copyPath': '复制路径',
     'projectAction.openVSCode': '用 VS Code 打开',
     'projectAction.openCursor': '用 Cursor 打开',
+    'projectAction.openCCSwitch': '打开 CC Switch',
     'projectAction.pathCopied': '项目路径已复制。',
     'projectAction.openFolderFailed': '打开目录失败：{message}',
     'projectAction.openEditorFailed': '打开 {editor} 失败。请确认命令已加入 PATH。',
+    'projectAction.openCCSwitchFailed': '打开 CC Switch 失败：{message}',
     // Status
     'status.idle': '空闲',
     'status.running': '运行中',
