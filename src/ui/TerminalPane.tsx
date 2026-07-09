@@ -48,6 +48,11 @@ function getTerminalTheme(backgroundColor: string) {
   }
 }
 
+function isScrolledToBottom(terminal: Terminal): boolean {
+  const buffer = terminal.buffer.active
+  return buffer.viewportY >= buffer.baseY
+}
+
 export default function TerminalPane({
   session,
   agentName,
@@ -67,10 +72,7 @@ export default function TerminalPane({
   const onSendInputRef = useRef(onSendInput)
   const onResizeRef = useRef(onResize)
   const allowAutoFocusRef = useRef(false)
-  const compositionTextRef = useRef('')
-  const compositionStartedAtRef = useRef(0)
-  const compositionDataRef = useRef('')
-  const lastDataRef = useRef({ text: '', at: 0 })
+  const suppressPasteUntilRef = useRef(0)
   const lastResizeRef = useRef<{ sessionId: string; cols: number; rows: number } | null>(null)
   const fitFrameRef = useRef<number | null>(null)
   const terminalBackgroundColorRef = useRef(terminalBackgroundColor)
@@ -192,7 +194,8 @@ export default function TerminalPane({
     const pasteClipboard = () => {
       const text = window.easyAgentCenter.readClipboardText()
       if (text && sessionIdRef.current) {
-        onSendInputRef.current(text)
+        suppressPasteUntilRef.current = performance.now() + 300
+        terminal.paste(text)
       }
     }
 
@@ -214,40 +217,10 @@ export default function TerminalPane({
     })
 
     terminal.onData((data) => {
-      const now = performance.now()
-      lastDataRef.current = { text: data, at: now }
-      if (compositionStartedAtRef.current > 0 && now >= compositionStartedAtRef.current) {
-        compositionDataRef.current += data
-      }
       if (sessionIdRef.current) {
         onSendInputRef.current(data)
       }
     })
-
-    const textarea = container.querySelector('.xterm-helper-textarea') as HTMLTextAreaElement | null
-    const handleCompositionStart = () => {
-      compositionTextRef.current = ''
-      compositionDataRef.current = ''
-      compositionStartedAtRef.current = performance.now()
-    }
-    const handleCompositionUpdate = (event: CompositionEvent) => {
-      compositionTextRef.current = event.data
-    }
-    const handleCompositionEnd = (event: CompositionEvent) => {
-      const text = event.data || compositionTextRef.current
-      if (!text) return
-
-      window.setTimeout(() => {
-        const { text: lastText, at } = lastDataRef.current
-        const sentByXterm = at >= compositionStartedAtRef.current &&
-          (lastText.includes(text) || compositionDataRef.current.includes(text))
-        if (!sentByXterm && sessionIdRef.current) {
-          onSendInputRef.current(text)
-        }
-        compositionStartedAtRef.current = 0
-        compositionDataRef.current = ''
-      }, 120)
-    }
 
     const focusTerminal = () => {
       if (canFocusTerminal()) {
@@ -258,7 +231,9 @@ export default function TerminalPane({
       const text = event.clipboardData?.getData('text/plain')
       if (!text || !sessionIdRef.current) return
       event.preventDefault()
-      onSendInputRef.current(text)
+      event.stopPropagation()
+      if (performance.now() < suppressPasteUntilRef.current) return
+      terminal.paste(text)
     }
     const handleContextMenu = (event: MouseEvent) => {
       event.preventDefault()
@@ -266,19 +241,13 @@ export default function TerminalPane({
     }
 
     container.addEventListener('mousedown', focusTerminal)
-    container.addEventListener('paste', handlePaste)
+    container.addEventListener('paste', handlePaste, true)
     container.addEventListener('contextmenu', handleContextMenu)
-    textarea?.addEventListener('compositionstart', handleCompositionStart)
-    textarea?.addEventListener('compositionupdate', handleCompositionUpdate)
-    textarea?.addEventListener('compositionend', handleCompositionEnd)
 
     return () => {
       container.removeEventListener('mousedown', focusTerminal)
-      container.removeEventListener('paste', handlePaste)
+      container.removeEventListener('paste', handlePaste, true)
       container.removeEventListener('contextmenu', handleContextMenu)
-      textarea?.removeEventListener('compositionstart', handleCompositionStart)
-      textarea?.removeEventListener('compositionupdate', handleCompositionUpdate)
-      textarea?.removeEventListener('compositionend', handleCompositionEnd)
       if (fitFrameRef.current !== null) {
         window.cancelAnimationFrame(fitFrameRef.current)
         fitFrameRef.current = null
@@ -341,9 +310,14 @@ export default function TerminalPane({
       if (event.sessionId !== session.id) return
 
       if (event.type === 'data' && event.data && terminalRef.current) {
-        terminalRef.current.write(event.data)
+        const terminal = terminalRef.current
+        const shouldFollowOutput = isScrolledToBottom(terminal)
+        terminal.write(event.data, () => {
+          if (shouldFollowOutput) {
+            terminal.scrollToBottom()
+          }
+        })
         renderedOutputRef.current = appendRenderedOutput(renderedOutputRef.current, event.data)
-        terminalRef.current.scrollToBottom()
       }
 
       if (event.type === 'exit' && terminalRef.current) {
